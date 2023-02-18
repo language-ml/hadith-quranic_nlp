@@ -5,11 +5,7 @@ from setuptools import find_packages, setup
 
 
 def read(*paths, **kwargs):
-    """Read the contents of a text file safely.
-    >>> read("project_name", "VERSION")
-    '0.1.0'
-    >>> read("README.md")
-    ...
+    """Read the contents of a text file safely.    ...
     """
 
     content = ""
@@ -31,7 +27,7 @@ def read_requirements(path):
 
 setup(
     name="quranic_nlp",
-    version="1.0",
+    version="1.2",
     description="quarnic nlp",
     url="https://github.com/language-ml/hadith-quranic_nlp/",
     long_description=read("README.md"),
