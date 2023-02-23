@@ -11,6 +11,11 @@ from quranic_nlp import dependency_parsing as dp
 from quranic_nlp import postagger as pt
 from quranic_nlp import root
 from quranic_nlp import lemmatizer
+# import utils
+# import dependency_parsing as dp
+# import postagger as pt
+# import root
+# import lemmatizer
 
 soure = None
 ayeh = None
@@ -121,9 +126,11 @@ class NLP():
                                     json={"query": soure_name, "dediac": 'true'})
                 if rep.ok:
                     out = rep.json()['output']
-                    if out in utils.AYEH_INDEX: 
-                        soure = utils.AYEH_INDEX.index(out) + 1
-                        sent = doc._.sentences
+                    for inx, output in enumerate(utils.AYEH_INDEX):
+                        if out in output: 
+                            soure = inx + 1
+                            sent = doc._.sentences
+                    
         else:
             rep = requests.post(
                 'https://hadith.ai/quranic_extraction/', json={"query": text, 'min_tok': 3, 'min_char': 3})

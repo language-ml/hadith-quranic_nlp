@@ -1,5 +1,6 @@
 import pandas as pd
 from quranic_nlp import utils
+# import utils
 
 
 def load_model():
