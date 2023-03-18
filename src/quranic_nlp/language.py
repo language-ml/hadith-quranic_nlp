@@ -18,6 +18,7 @@ from quranic_nlp import lemmatizer
 # import lemmatizer
 
 soure = None
+temp = None
 ayeh = None
 
 def findSent(doc):
@@ -27,8 +28,13 @@ def findSent(doc):
         files = utils.recursive_glob(utils.AYEH_SEMANTIC, f'{i}-*.json')
         files.sort(key=lambda f: int(''. join(filter(str. isdigit, f))))
         qSyntaxSemantics.append(files)
+    global soure
+    global temp
+    if soure != 9 and ayeh == 1:
+        temp = soure
+        soure = 1
     file = qSyntaxSemantics[soure - 1][ayeh - 1]
-    with open(file) as f:
+    with open(file, encoding="utf-8") as f:
         data = json.load(f)
 
     nodes = data['Data']['ayeh']['node']['Data']
@@ -69,6 +75,7 @@ class NLP():
     Doc.set_extension("ayah", default=None)
     Doc.set_extension("sentences", getter=findSent)
     Doc.set_extension("sim_ayahs", default=None)
+    Doc.set_extension("text", default=None)
     Doc.set_extension("translations", default=None)
 
     def __init__(self, lang, pipelines, translation_lang):
@@ -144,11 +151,21 @@ class NLP():
         if soure:
             df = pd.read_csv(utils.QURAN_ORDER)
             df.index = df['index']
-            sent._.revelation_order = df.loc[soure]['order_name']
-            sent._.surah = df.loc[soure]['soure']
-            sent._.ayah = ayeh
-            sent._.translations = utils.get_translations(translationlang, soure, ayeh)
-            sent._.sim_ayahs = utils.get_sim_ayahs(soure, ayeh)
+
+            if temp != None:
+                sent._.revelation_order = df.loc[temp]['order_name']
+                sent._.surah = df.loc[temp]['soure']
+                sent._.ayah = ayeh
+                sent._.text = utils.get_text(1, ayeh)
+                sent._.translations = utils.get_translations(translationlang, 1, ayeh)
+                sent._.sim_ayahs = utils.get_sim_ayahs(1, ayeh)
+            else:
+                sent._.revelation_order = df.loc[soure]['order_name']
+                sent._.surah = df.loc[soure]['soure']
+                sent._.ayah = ayeh
+                sent._.text = utils.get_text(soure, ayeh)
+                sent._.translations = utils.get_translations(translationlang, soure, ayeh)
+                sent._.sim_ayahs = utils.get_sim_ayahs(soure, ayeh)
         return sent
 
     @Language.component('dependancyparser', assigns=["token.dep"])

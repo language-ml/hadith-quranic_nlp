@@ -21,7 +21,7 @@ def load_model():
 def depparser(model, soure, ayeh):
 
     file = model[soure - 1][ayeh - 1]
-    with open(file) as f:
+    with open(file, encoding="utf-8") as f:
         data = json.load(f)
 
     realations = data['Data']['relationName']['Data']

@@ -1,17 +1,20 @@
 from spacy import displacy
-from quranic_nlp import language
-from quranic_nlp import utils
+import language
+import utils
+
+
+
 
 # utils.print_all_translations()
-translation_translator = 'fa#1'
-pips = 'dep,pos,root,lemma'
+# translation_translator = 'fa#1'
+# pips = 'dep,pos,root,lemma'
 
-nlp = language.Pipeline(pips, translation_translator)
-doc = nlp('1#4')
+# nlp = language.Pipeline(pips, translation_translator)
+# doc = nlp('27#30')
 
-options = {"compact": True, "bg": "#09a3d5",
-           "color": "white", "font": "xb-niloofar"}
-displacy.serve(doc, style="dep", options=options)
+# options = {"compact": True, "bg": "#09a3d5",
+#            "color": "white", "font": "xb-niloofar"}
+# displacy.serve(doc, style="dep", options=options)
 
 '''
     2#1
@@ -22,22 +25,18 @@ displacy.serve(doc, style="dep", options=options)
 # doc = nlp('1#1')
 # doc = nlp('آل عمران # 4')
 # doc = nlp('حمد لله رب العالمین')
-# print(doc)
-# print(doc._.revelation_order)
-# print(doc._.ayah)
-# print(doc._.surah)
-# print(doc._.sim_ayahs)
-# print(doc._.translations)
+import language
 
-# for d in doc:
-#     print(d)
-#     print(d.head)
-#     print(d.dep_)
-#     print(d._.dep_arc)
-#     print(d._.root)
-#     print(d.lemma_)
-#     print(d.pos_)
-#     print('s')
+translation_translator = 'fa#1'
+pips = 'dep,pos,root,lemma'
+nlp = language.Pipeline(pips, translation_translator)
 
-# dictionary = language.to_json(pips, doc)
-# print(dictionary)
+doc = nlp('3#1')
+
+print(doc)
+print(doc._.text)
+print(doc._.surah)
+print(doc._.ayah)
+print(doc._.revelation_order)
+print(doc._.sim_ayahs)
+print(doc._.translations)

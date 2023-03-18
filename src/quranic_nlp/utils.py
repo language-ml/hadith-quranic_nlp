@@ -1,3 +1,4 @@
+import xml.etree.ElementTree as ET
 import fnmatch
 import os
 import re
@@ -48,9 +49,11 @@ POS_UNI_FA = {'NOUN': 'اسم',
               'SYM': 'نماد',
               'X': 'دیگر'}
 
-AYEH_SEMANTIC = './data/qSyntaxSemantic/'
-AYEH_SYNTAX = './data/syntax_data/'
-QURAN_ORDER = './data/quarn_order.csv'
+path, filename = os.path.split(os.path.realpath(__file__))
+
+AYEH_SEMANTIC = path + '/data/qSyntaxSemantic/'
+AYEH_SYNTAX = path + '/data/syntax_data/'
+QURAN_ORDER = path + '/data/quarn_order.csv'
 
 TRANSLATION = {
     'fa' : ['ansarian (Hussain Ansarian)', 'ayati (AbdolMohammad Ayati)', 'bahrampour (Abolfazl Bahrampour)', 'fooladvand (Mohammad Mahdi Fooladvand)', 'gharaati (Mohsen Gharaati)', 'ghomshei (Mahdi Elahi Ghomshei)', 'khorramdel (Mostafa Khorramdel)', "makarem (Baha'oddin Khorramshahi)", 'makarem (Naser Makarem Shirazi)', 'moezzi (Mohammad Kazem Moezzi)', 'mojtabavi (Sayyed Jalaloddin Mojtabavi)', 'sadeqi (Mohammad Sadeqi Tehrani)', 'safavi (Sayyed Mohammad Reza Safavi)'],
@@ -100,7 +103,7 @@ TRANSLATION = {
 
 def get_sim_ayahs(soure, ayeh):
     output = []
-    with open('./data/sim_ayat.txt') as file:
+    with open(path + '/data/sim_ayat.txt', encoding="utf-8") as file:
         sims = file.readlines()
         for sim in sims:
             ayeha = sim.split('\t')
@@ -112,12 +115,25 @@ def get_sim_ayahs(soure, ayeh):
                     output.append(str(int(temp[:-3])) + '#' + str(int(temp[-3:])))
     return output
 
+def get_text(soure, ayeh):
+    tree = ET.parse(os.path.join(path, 'data/quran.xml'))
+    root = tree.getroot()
+
+    # Search for elements with a specific attribute value
+    for elem in root.iter('sura'):
+        if elem.attrib.get('index') == str(soure):
+            for e in elem.iter('aya'):
+                if e.attrib.get('index') == str(ayeh):
+                    return e.attrib.get('text')
+
 def get_translations(input, soure, ayeh):
+    if not input:
+        return ''
     if '#' in input:
         lang, index = input.split('#')
         name = TRANSLATION[lang][int(index)].split()[0]
-        filename = os.path.join('./data/translate_quran', lang, name+'.txt')
-        with open(filename) as file:
+        filename = os.path.join(path + '/data/translate_quran', lang, name+'.txt')
+        with open(filename, encoding="utf-8") as file:
             txt = file.read()
         tempAyeh = ayeh
         if soure == 1:
@@ -137,8 +153,8 @@ def get_translations(input, soure, ayeh):
         txt_traslation = []
         for names in TRANSLATION[lang]:
             name = names.split()[0]
-            filename = os.path.join('./data/translate_quran', lang, name+'.txt')
-            with open(filename) as file:
+            filename = os.path.join(path + '/data/translate_quran', lang, name+'.txt')
+            with open(filename, encoding="utf-8") as file:
                 txt = file.read()
             start = re.search(f"{soure}\|{ayeh+1}\|", txt)
             end = re.search(f"{soure}\|{ayeh+2}\|", txt)
