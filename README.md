@@ -114,6 +114,7 @@ nlp = language.Pipeline(pips, translation_translator)
 doc = nlp('1#4')
 
 print(doc)
+print(doc._.text)
 print(doc._.surah)
 print(doc._.ayah)
 print(doc._.revelation_order)
@@ -122,7 +123,8 @@ print(doc._.translations)
 ```
 
 ```
-إِيَّاكَ نَعْبُدُ وَ إِيَّاكَ نَسْتَعِينُ نحن نحن 
+إِيَّاكَ نَعْبُدُ وَ إِيَّاكَ نَسْتَعِينُ نحن نحن
+إِيَّاكَ نَعْبُدُ وَ إِيَّاكَ نَسْتَعِينُ 
 فاتحه
 4
 63
