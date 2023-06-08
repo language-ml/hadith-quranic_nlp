@@ -1,4 +1,6 @@
 import pandas as pd
+import json
+import os
 # from quranic_nlp import utils
 import utils
 
@@ -12,12 +14,29 @@ def load_model():
 def lemma(model, soure, ayeh):
     if soure == None:
         return None
+    
+        ## in the name of god 
+    if soure == 1 and ayeh == 1:
+        with open(os.path.join(utils.AYEH_SEMANTIC, '1-1.json'), encoding="utf-8") as f:
+            data = json.load(f)
+        data = data['Data']['ayeh']['node']['Data']
+        output = []
+        
+        for i in data:
+            out = dict()
+            d = i['xml']
+            out['pos'] = d.split('Pos')[1].split('\"')[1]
+            output.append(out)
+        return output
 
     file = model[soure - 1]
     df = pd.read_excel(file)
     gb = df.groupby('Ayah')
     gb = [gb.get_group(x) for x in gb.groups]
-    data = gb[ayeh - 1]
+    if soure == 1:
+        data = gb[ayeh - 2]
+    else:
+        data = gb[ayeh - 1]
 
     data.index = data['id']
 
