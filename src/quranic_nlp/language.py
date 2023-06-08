@@ -18,7 +18,6 @@ import root
 import lemmatizer
 
 soure = None
-temp = None
 ayeh = None
 
 def findSent(doc):
@@ -30,9 +29,6 @@ def findSent(doc):
         qSyntaxSemantics.append(files)
     global soure
     global temp
-    if soure != 9 and ayeh == 1:
-        temp = soure
-        soure = 1
     file = qSyntaxSemantics[soure - 1][ayeh - 1]
     with open(file, encoding="utf-8") as f:
         data = json.load(f)
@@ -123,10 +119,17 @@ class NLP():
                 if not bool(re.search('[ا-ی]', text)):
                     soure, ayeh = doc.text.split('#')
                     soure, ayeh = int(soure), int(ayeh)
+                    if ayeh == 0 and soure != 9:
+                        soure = 1
+                        ayeh = 1
                     sent = doc._.sentences
                 else:
                     soure_name, ayeh = doc.text.split('#')
                     ayeh = int(ayeh)
+                    if ayeh == 0 and soure != 9:
+                        soure = 1
+                        ayeh = 1
+
                     soure_name = soure_name.strip()
                     if not str(soure_name).startswith('ال ') and str(soure_name).startswith('ال'):
                         soure_name = soure_name[2:]
@@ -148,25 +151,28 @@ class NLP():
                     if out:
                         soure, ayeh = out[0][0].split('##')
                         soure, ayeh = int(soure), int(ayeh)
+                        if ayeh == 0 and soure != 9:
+                            soure = 1
+                            ayeh = 1                            
                         sent = doc._.sentences
             if soure:
                 df = pd.read_csv(utils.QURAN_ORDER)
                 df.index = df['index']
 
-                if temp != None:
-                    sent._.revelation_order = df.loc[temp]['order_name']
-                    sent._.surah = df.loc[temp]['soure']
-                    sent._.ayah = ayeh
-                    sent._.text = utils.get_text(1, ayeh)
-                    sent._.translations = utils.get_translations(translationlang, 1, ayeh)
-                    sent._.sim_ayahs = utils.get_sim_ayahs(1, ayeh)
-                else:
-                    sent._.revelation_order = df.loc[soure]['order_name']
-                    sent._.surah = df.loc[soure]['soure']
-                    sent._.ayah = ayeh
-                    sent._.text = utils.get_text(soure, ayeh)
-                    sent._.translations = utils.get_translations(translationlang, soure, ayeh)
-                    sent._.sim_ayahs = utils.get_sim_ayahs(soure, ayeh)
+                # if temp != None:
+                #     sent._.revelation_order = df.loc[temp]['order_name']
+                #     sent._.surah = df.loc[temp]['soure']
+                #     sent._.ayah = ayeh
+                #     sent._.text = utils.get_text(1, ayeh)
+                #     sent._.translations = utils.get_translations(translationlang, 1, ayeh)
+                #     sent._.sim_ayahs = utils.get_sim_ayahs(1, ayeh)
+                # else:
+                sent._.revelation_order = df.loc[soure]['order_name']
+                sent._.surah = df.loc[soure]['soure']
+                sent._.ayah = ayeh
+                sent._.text = utils.get_text(soure, ayeh)
+                sent._.translations = utils.get_translations(translationlang, soure, ayeh)
+                sent._.sim_ayahs = utils.get_sim_ayahs(soure, ayeh)
         except:
             soure = None
             ayeh = None
@@ -195,7 +201,6 @@ class NLP():
         if output:
             for d, tags in zip(doc, output):
                 if 'pos' in tags:
-                    print(d, tags['pos'])
                     d.pos_ = utils.POS_FA_UNI[tags['pos']]
 
         return doc

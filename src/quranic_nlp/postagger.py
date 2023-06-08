@@ -16,10 +16,14 @@ def postagger(model, soure, ayeh):
     df = pd.read_excel(file)
     gb = df.groupby('Ayah')
     gb = [gb.get_group(x) for x in gb.groups]
-    data = gb[ayeh - 1]
+       
+    if soure == 1:
+        data = gb[ayeh - 2]
+    else:
+        data = gb[ayeh - 1]
 
     data.index = data['id']
-
+    
     output = []
     for id in data['id'].values:
         out = dict()
