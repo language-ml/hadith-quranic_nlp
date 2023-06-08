@@ -1,6 +1,6 @@
 import pandas as pd
-from quranic_nlp import utils
-# import utils
+# from quranic_nlp import utils
+import utils
 
 
 def load_model():
@@ -10,7 +10,8 @@ def load_model():
 
 
 def postagger(model, soure, ayeh):
-
+    if soure == None:
+        return None
     file = model[soure - 1]
     df = pd.read_excel(file)
     gb = df.groupby('Ayah')

@@ -1,7 +1,7 @@
 import pandas as pd
 import json
-from quranic_nlp import utils
-# import utils
+# from quranic_nlp import utils
+import utils
 
 
 def load_model():
@@ -19,7 +19,8 @@ def load_model():
 
 
 def depparser(model, soure, ayeh):
-
+    if soure == None:
+        return None
     file = model[soure - 1][ayeh - 1]
     with open(file, encoding="utf-8") as f:
         data = json.load(f)
