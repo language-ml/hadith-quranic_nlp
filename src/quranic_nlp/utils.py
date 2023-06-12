@@ -53,6 +53,7 @@ path, filename = os.path.split(os.path.realpath(__file__))
 
 AYEH_SEMANTIC = path + '/data/qSyntaxSemantic/'
 AYEH_SYNTAX = path + '/data/syntax_data/'
+MORPHOLOGY = path + '/data/morphologhy.csv'
 QURAN_ORDER = path + '/data/quarn_order.csv'
 
 TRANSLATION = {

@@ -6,16 +6,16 @@ import numpy as np
 import requests
 import json
 import re
-# from quranic_nlp import utils
-# from quranic_nlp import dependency_parsing as dp
-# from quranic_nlp import postagger as pt
-# from quranic_nlp import root
-# from quranic_nlp import lemmatizer
-import utils
-import dependency_parsing as dp
-import postagger as pt
-import root
-import lemmatizer
+from quranic_nlp import utils
+from quranic_nlp import dependency_parsing as dp
+from quranic_nlp import postagger as pt
+from quranic_nlp import root
+from quranic_nlp import lemmatizer
+# import utils
+# import dependency_parsing as dp
+# import postagger as pt
+# import root
+# import lemmatizer
 
 soure = None
 ayeh = None
@@ -208,7 +208,7 @@ class NLP():
     @Language.component('lemmatize', assigns=["token.lemma"])
     def lemmatizer(doc):
 
-        output = lemmatizer.lemma(postagger_model, soure, ayeh)
+        output = lemmatizer.lemma(lemma_model, soure, ayeh)
         if output:        
             for d, tags in zip(doc, output):
                 if 'lemma' in tags:
@@ -216,9 +216,9 @@ class NLP():
         return doc
 
     @Language.component('root')
-    def lemmatizer(doc):
+    def rooter(doc):
 
-        output = root.root(postagger_model, soure, ayeh)
+        output = root.root(root_model, soure, ayeh)
         if output:
             for d, tags in zip(doc, output):
                 if 'root' in tags:

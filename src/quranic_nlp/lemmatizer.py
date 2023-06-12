@@ -1,51 +1,36 @@
 import pandas as pd
 import json
 import os
-# from quranic_nlp import utils
-import utils
+from quranic_nlp import utils
+# import utils
 
 
 def load_model():
-    syntax_data = utils.recursive_glob(utils.AYEH_SYNTAX, '*.xlsx')
-    syntax_data.sort()
-    return syntax_data
+    morphologhy = pd.read_csv(utils.MORPHOLOGY)
+    morphologhy = morphologhy.fillna('')
+    return morphologhy
 
 
 def lemma(model, soure, ayeh):
     if soure == None:
         return None
     
-        ## in the name of god 
-    if soure == 1 and ayeh == 1:
-        with open(os.path.join(utils.AYEH_SEMANTIC, '1-1.json'), encoding="utf-8") as f:
-            data = json.load(f)
-        data = data['Data']['ayeh']['node']['Data']
-        output = []
-        
-        for i in data:
-            out = dict()
-            d = i['xml']
-            out['pos'] = d.split('Pos')[1].split('\"')[1]
-            output.append(out)
-        return output
+    gb_soure = model.groupby('soure')
+    gb_soure = [gb_soure.get_group(x) for x in gb_soure.groups]
+    df = gb_soure[soure - 1]
 
-    file = model[soure - 1]
-    df = pd.read_excel(file)
-    gb = df.groupby('Ayah')
+    gb = df.groupby('ayeh')
     gb = [gb.get_group(x) for x in gb.groups]
-    if soure == 1:
-        data = gb[ayeh - 2]
-    else:
-        data = gb[ayeh - 1]
-
-    data.index = data['id']
+    data = gb[ayeh - 1]
 
     output = []
-    for id in data['id'].values:
+    for lemma in data['Lemma']:
         out = dict()
         try:
-            out['lemma'] = data.loc[id]['data'].split('Lemma')[
-                1].split('\"')[1]
+            if lemma:
+                out['lemma'] = lemma
+            else:
+                out['lemma'] = ''
             output.append(out)
         except:
             output.append(out)

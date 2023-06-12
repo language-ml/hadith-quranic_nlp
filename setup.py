@@ -27,7 +27,7 @@ def read_requirements(path):
 
 setup(
     name="quranic_nlp",
-    version="1.1.6",
+    version="1.1.8",
     description="quarnic nlp",
     url="https://github.com/language-ml/hadith-quranic_nlp/",
     long_description=read("README.md"),
