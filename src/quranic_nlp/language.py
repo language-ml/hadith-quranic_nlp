@@ -6,16 +6,16 @@ import numpy as np
 import requests
 import json
 import re
-from quranic_nlp import utils
-from quranic_nlp import dependency_parsing as dp
-from quranic_nlp import postagger as pt
-from quranic_nlp import root
-from quranic_nlp import lemmatizer
-# import utils
-# import dependency_parsing as dp
-# import postagger as pt
-# import root
-# import lemmatizer
+# from quranic_nlp import utils
+# from quranic_nlp import dependency_parsing as dp
+# from quranic_nlp import postagger as pt
+# from quranic_nlp import root
+# from quranic_nlp import lemmatizer
+import utils
+import dependency_parsing as dp
+import postagger as pt
+import root
+import lemmatizer
 
 soure = None
 ayeh = None
@@ -73,6 +73,7 @@ class NLP():
     Doc.set_extension("sim_ayahs", default=None)
     Doc.set_extension("text", default=None)
     Doc.set_extension("translations", default=None)
+    Doc.set_extension("hadiths", default=None)
 
     def __init__(self, lang, pipelines, translation_lang):
 
@@ -159,20 +160,13 @@ class NLP():
                 df = pd.read_csv(utils.QURAN_ORDER)
                 df.index = df['index']
 
-                # if temp != None:
-                #     sent._.revelation_order = df.loc[temp]['order_name']
-                #     sent._.surah = df.loc[temp]['soure']
-                #     sent._.ayah = ayeh
-                #     sent._.text = utils.get_text(1, ayeh)
-                #     sent._.translations = utils.get_translations(translationlang, 1, ayeh)
-                #     sent._.sim_ayahs = utils.get_sim_ayahs(1, ayeh)
-                # else:
                 sent._.revelation_order = df.loc[soure]['order_name']
                 sent._.surah = df.loc[soure]['soure']
                 sent._.ayah = ayeh
                 sent._.text = utils.get_text(soure, ayeh)
                 sent._.translations = utils.get_translations(translationlang, soure, ayeh)
                 sent._.sim_ayahs = utils.get_sim_ayahs(soure, ayeh)
+                sent._.hadiths = utils.get_hadiths(soure, ayeh)
         except:
             soure = None
             ayeh = None

@@ -1,15 +1,8 @@
 import xml.etree.ElementTree as ET
+import requests
 import fnmatch
 import os
 import re
-
-
-def recursive_glob(treeroot, pattern):
-    results = []
-    for base, dirs, files in os.walk(treeroot):
-        good_files = fnmatch.filter(files, pattern)
-        results.extend(os.path.join(base, f) for f in good_files)
-    return results
 
 
 POS_FA_UNI = {'اسم': 'NOUN',
@@ -102,76 +95,6 @@ TRANSLATION = {
     'ur' : ["maududi (Abul A'ala Maududi)", 'kanzuliman (Ahmed Raza Khan)', 'ahmedali (	Ahmed Ali)', 'jalandhry (Fateh Muhammad Jalandhry)', 'qadri (Tahir ul Qadri)', 'jawadi (Syed Zeeshan Haider Jawadi)', 'junagarhi (Muhammad Junagarhi)', 'najafi (Muhammad Hussain Najafi)'], 
     }
 
-def get_sim_ayahs(soure, ayeh):
-    output = []
-    with open(path + '/data/sim_ayat.txt', encoding="utf-8") as file:
-        sims = file.readlines()
-        for sim in sims:
-            ayeha = sim.split('\t')
-            so = int(ayeha[0][:-3])
-            ay = int(ayeha[0][-3:])
-            if soure == so and ay == ayeh:
-                for aye in ayeha[1:]:
-                    temp , cost = aye.split(':')
-                    output.append(str(int(temp[:-3])) + '#' + str(int(temp[-3:])))
-    return output
-
-def get_text(soure, ayeh):
-    tree = ET.parse(os.path.join(path, 'data/quran.xml'))
-    root = tree.getroot()
-
-    # Search for elements with a specific attribute value
-    for elem in root.iter('sura'):
-        if elem.attrib.get('index') == str(soure):
-            for e in elem.iter('aya'):
-                if e.attrib.get('index') == str(ayeh):
-                    return e.attrib.get('text')
-
-def get_translations(input, soure, ayeh):
-    if not input:
-        return ''
-    if '#' in input:
-        lang, index = input.split('#')
-        name = TRANSLATION[lang][int(index)].split()[0]
-        filename = os.path.join(path + '/data/translate_quran', lang, name+'.txt')
-        with open(filename, encoding="utf-8") as file:
-            txt = file.read()
-        tempAyeh = ayeh
-        if soure == 1:
-            tempAyeh += 1
-        start = re.search(f"{soure}\|{tempAyeh}\|", txt)
-        end = re.search(f"{soure}\|{tempAyeh+1}\|", txt)
-        
-        if end != None:
-            return txt[start.end():end.start()]
-        else:
-            end2 = re.search(f"{soure+1}\|{1}\|", txt)
-            if end2 != None:
-                return txt[start.end():end2.start()]
-            else:
-                return txt[start.end():].split('\n')[0]
-    else:
-        txt_traslation = []
-        for names in TRANSLATION[lang]:
-            name = names.split()[0]
-            filename = os.path.join(path + '/data/translate_quran', lang, name+'.txt')
-            with open(filename, encoding="utf-8") as file:
-                txt = file.read()
-            start = re.search(f"{soure}\|{ayeh+1}\|", txt)
-            end = re.search(f"{soure}\|{ayeh+2}\|", txt)
-            if end != None:
-                txt_traslation.append(txt[start.end():end.start()])
-            else:
-                txt_traslation.append(txt[start.end:])
-        return txt_traslation
-
-
-def print_all_translations():
-    for key, value in TRANSLATION.items() :
-        for val in value:
-            # val = val.split('(')[0].strip()
-            val = val.split('(')[1].split(')')[0].strip()
-            print (key, val)
 
 # AYEH_INDEX = ['حمد',
 #  'بقره',
@@ -402,4 +325,95 @@ AYEH_INDEX = [['حمد', 'الفاتحه', 'ام القران', 'فاتحه ال
  ['اخلاص', 'توحيد', 'اساس', 'صمد', 'نسبه رب'],  
  ['فلق'],  
  ['ناس']
- ]
+]
+
+
+
+def get_sim_ayahs(soure, ayeh):
+    output = []
+    with open(path + '/data/sim_ayat.txt', encoding="utf-8") as file:
+        sims = file.readlines()
+        for sim in sims:
+            ayeha = sim.split('\t')
+            so = int(ayeha[0][:-3])
+            ay = int(ayeha[0][-3:])
+            if soure == so and ay == ayeh:
+                for aye in ayeha[1:]:
+                    temp , cost = aye.split(':')
+                    output.append(str(int(temp[:-3])) + '#' + str(int(temp[-3:])))
+    return output
+
+def get_text(soure, ayeh):
+    tree = ET.parse(os.path.join(path, 'data/quran.xml'))
+    root = tree.getroot()
+
+    # Search for elements with a specific attribute value
+    for elem in root.iter('sura'):
+        if elem.attrib.get('index') == str(soure):
+            for e in elem.iter('aya'):
+                if e.attrib.get('index') == str(ayeh):
+                    return e.attrib.get('text')
+
+def get_translations(input, soure, ayeh):
+    if not input:
+        return ''
+    if '#' in input:
+        lang, index = input.split('#')
+        name = TRANSLATION[lang][int(index)].split()[0]
+        filename = os.path.join(path + '/data/translate_quran', lang, name+'.txt')
+        with open(filename, encoding="utf-8") as file:
+            txt = file.read()
+        tempAyeh = ayeh
+        if soure == 1:
+            tempAyeh += 1
+        start = re.search(f"{soure}\|{tempAyeh}\|", txt)
+        end = re.search(f"{soure}\|{tempAyeh+1}\|", txt)
+        
+        if end != None:
+            return txt[start.end():end.start()]
+        else:
+            end2 = re.search(f"{soure+1}\|{1}\|", txt)
+            if end2 != None:
+                return txt[start.end():end2.start()]
+            else:
+                return txt[start.end():].split('\n')[0]
+    else:
+        txt_traslation = []
+        for names in TRANSLATION[lang]:
+            name = names.split()[0]
+            filename = os.path.join(path + '/data/translate_quran', lang, name+'.txt')
+            with open(filename, encoding="utf-8") as file:
+                txt = file.read()
+            start = re.search(f"{soure}\|{ayeh+1}\|", txt)
+            end = re.search(f"{soure}\|{ayeh+2}\|", txt)
+            if end != None:
+                txt_traslation.append(txt[start.end():end.start()])
+            else:
+                txt_traslation.append(txt[start.end:])
+        return txt_traslation
+
+
+def print_all_translations():
+    for key, value in TRANSLATION.items() :
+        for val in value:
+            # val = val.split('(')[0].strip()
+            val = val.split('(')[1].split(')')[0].strip()
+            print (key, val)
+
+
+def recursive_glob(treeroot, pattern):
+    results = []
+    for base, dirs, files in os.walk(treeroot):
+        good_files = fnmatch.filter(files, pattern)
+        results.extend(os.path.join(base, f) for f in good_files)
+    return results
+
+def get_hadiths(soure, ayeh, filter_number = 10):
+    ids = requests.post('https://hadith.ai/get_hadith_content/get_ayah', json={"suraId": soure, "ayaId": ayeh}).json()
+    hadiths = requests.post('https://hadith.ai/get_hadith_content/create_hadith', json={  "hid": ids[:filter_number], "out_type": "json"}).json()
+    lst = []
+    for i in hadiths:
+        had = hadiths[i]
+        text = had['narrators'] + '\n' + had['hadith'] + '\n' + had['translation_text']
+        lst.append(text) 
+    return lst

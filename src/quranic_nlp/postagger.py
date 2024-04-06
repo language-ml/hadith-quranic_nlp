@@ -1,8 +1,8 @@
 import pandas as pd
 import json
 import os
-from quranic_nlp import utils
-# import utils
+# from quranic_nlp import utils
+import utils
 
 
 def load_model():
@@ -32,13 +32,16 @@ def postagger(model, soure, ayeh):
     
     file = model[soure - 1]
     df = pd.read_excel(file)
-    gb = df.groupby('Ayah')
-    gb = [gb.get_group(x) for x in gb.groups]
+
+    # gb = df.groupby('Ayah')
+    # gb = [gb.get_group(x) for x in gb.groups]
        
     if soure == 1:
-        data = gb[ayeh - 2]
+        data = df[model['ayeh'] == ayeh - 2]
+    #     data = gb[ayeh - 2]
     else:
-        data = gb[ayeh - 1]
+        data = df[model['ayeh'] == ayeh - 2]
+    #     data = gb[ayeh - 1]
 
     data.index = data['id']
     

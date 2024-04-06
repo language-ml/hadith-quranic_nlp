@@ -1,8 +1,8 @@
 import pandas as pd
 import json
 import os
-from quranic_nlp import utils
-# import utils
+# from quranic_nlp import utils
+import utils
 
 
 def load_model():
@@ -15,13 +15,14 @@ def lemma(model, soure, ayeh):
     if soure == None:
         return None
     
-    gb_soure = model.groupby('soure')
-    gb_soure = [gb_soure.get_group(x) for x in gb_soure.groups]
-    df = gb_soure[soure - 1]
+    data = model[(model['soure'] == soure - 1) & (model['ayeh'] == ayeh - 1)]
+    # gb_soure = model.groupby('soure')
+    # gb_soure = [gb_soure.get_group(x) for x in gb_soure.groups]
+    # df = gb_soure[soure - 1]
 
-    gb = df.groupby('ayeh')
-    gb = [gb.get_group(x) for x in gb.groups]
-    data = gb[ayeh - 1]
+    # gb = df.groupby('ayeh')
+    # gb = [gb.get_group(x) for x in gb.groups]
+    # data = gb[ayeh - 1]
 
     output = []
     for lemma in data['Lemma']:
