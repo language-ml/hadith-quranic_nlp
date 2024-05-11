@@ -1,21 +1,23 @@
-import spacy
+# from quranic_nlp import dependency_parsing as dp
+# from quranic_nlp import postagger as pt
+# from quranic_nlp import lemmatizer
+# from quranic_nlp import utils
+# from quranic_nlp import root
+
 from spacy.language import Language
 from spacy.tokens import Doc, Token
 import pandas as pd
 import numpy as np
-import requests
+import spacy
 import json
 import re
-# from quranic_nlp import utils
-# from quranic_nlp import dependency_parsing as dp
-# from quranic_nlp import postagger as pt
-# from quranic_nlp import root
-# from quranic_nlp import lemmatizer
-import utils
+
 import dependency_parsing as dp
 import postagger as pt
-import root
 import lemmatizer
+import root
+import requests
+import utils
 
 soure = None
 ayeh = None
@@ -116,60 +118,23 @@ class NLP():
             global ayeh
             sent = Doc(nlp.vocab)
             text = doc.text
-            if '#' in text:
-                if not bool(re.search('[ا-ی]', text)):
-                    soure, ayeh = doc.text.split('#')
-                    soure, ayeh = int(soure), int(ayeh)
-                    if ayeh == 0 and soure != 9:
-                        soure = 1
-                        ayeh = 1
-                    sent = doc._.sentences
-                else:
-                    soure_name, ayeh = doc.text.split('#')
-                    ayeh = int(ayeh)
-                    if ayeh == 0 and soure != 9:
-                        soure = 1
-                        ayeh = 1
+            
+            soure, ayeh = search_in_quran(text)
+            
+            sent = doc._.sentences
+            
+            df = pd.read_csv(utils.QURAN_ORDER)
+            df.index = df['index']
 
-                    soure_name = soure_name.strip()
-                    if not str(soure_name).startswith('ال ') and str(soure_name).startswith('ال'):
-                        soure_name = soure_name[2:]
-                    rep = requests.post('https://hadith.ai/preprocessing/',
-                                        json={"query": soure_name, "dediac": 'true'})
-                    if rep.ok:
-                        out = rep.json()['output']
-                        for inx, output in enumerate(utils.AYEH_INDEX):
-                            if out in output: 
-                                soure = inx + 1
-                                sent = doc._.sentences
-                        
-            else:
-                rep = requests.post(
-                    'https://hadith.ai/quranic_extraction/', json={"query": text, 'min_tok': 3, 'min_char': 3})
-                
-                if rep.ok:
-                    out = rep.json()['output']['quran_id']
-                    if out:
-                        soure, ayeh = out[0][0].split('##')
-                        soure, ayeh = int(soure), int(ayeh)
-                        if ayeh == 0 and soure != 9:
-                            soure = 1
-                            ayeh = 1                            
-                        sent = doc._.sentences
-            if soure:
-                df = pd.read_csv(utils.QURAN_ORDER)
-                df.index = df['index']
-
-                sent._.revelation_order = df.loc[soure]['order_name']
-                sent._.surah = df.loc[soure]['soure']
-                sent._.ayah = ayeh
-                sent._.text = utils.get_text(soure, ayeh)
-                sent._.translations = utils.get_translations(translationlang, soure, ayeh)
-                sent._.sim_ayahs = utils.get_sim_ayahs(soure, ayeh)
-                sent._.hadiths = utils.get_hadiths(soure, ayeh)
+            sent._.revelation_order = df.loc[soure]['order_name']
+            sent._.surah = df.loc[soure]['soure']
+            sent._.ayah = ayeh
+            sent._.text = utils.get_text(soure, ayeh)
+            sent._.translations = utils.get_translations(translationlang, soure, ayeh)
+            sent._.sim_ayahs = utils.get_sim_ayahs(soure, ayeh)
+            sent._.hadiths = utils.get_hadiths(soure, ayeh)
         except:
-            soure = None
-            ayeh = None
+            print()
         return sent
 
     @Language.component('dependancyparser', assigns=["token.dep"])
@@ -251,3 +216,54 @@ def to_json(pipelines, doc):
             dictionary['head'] = d.head
         dict_list.append(dictionary)
     return dict_list
+
+
+def search_in_quran(text):
+    """
+     search in quran:
+        - when # not in text => search text in all quran 
+        - when # in text => search index ayeh
+
+    Args:
+        text (_type_): this is input for search in quran with multi ways
+
+    Returns:
+        _type_: return soure and ayeh
+    """
+    
+    if '#' not in text:        
+        rep = requests.post('https://hadith.ai/quranic_extraction/', json={"query": text, 'min_tok': 3, 'min_char': 3})        
+        if rep.ok and rep.json()['output']['quran_id']:
+            out = rep.json()['output']['quran_id'][0]
+            #TODO : add ways -- now i use defaul 0
+            soure, ayeh = out[0].split('##')
+            soure, ayeh = int(soure), int(ayeh)            
+
+    else:
+        if not bool(re.search('[ا-ی]', text)):
+            soure, ayeh = text.split('#')
+            soure, ayeh = int(soure), int(ayeh)
+
+        else:
+            soure_name, ayeh = text.split('#')
+            ayeh = int(ayeh)
+            soure = get_index_soure_from_name_soure(soure_name.strip())
+                
+    if ayeh and soure:
+        return soure, ayeh
+    else:
+        raise('not found'+text)
+
+def get_index_soure_from_name_soure(soure_name):
+    if not str(soure_name).startswith('ال ') and str(soure_name).startswith('ال'):
+        soure_name = soure_name[2:]
+    rep = requests.post('https://hadith.ai/preprocessing/', json={"query": soure_name, "dediac": 'true'})
+    if rep.ok:
+        soure_name = rep.json()['output']
+
+    soure = None
+    for inx, output in enumerate(utils.AYEH_INDEX):
+        if soure_name in output: 
+            soure = inx + 1
+    return soure                
+    

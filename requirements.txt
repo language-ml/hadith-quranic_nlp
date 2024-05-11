@@ -2,3 +2,6 @@ spacy
 pandas
 numpy
 openpyxl
+zipfile
+requests
+python-dotenv
