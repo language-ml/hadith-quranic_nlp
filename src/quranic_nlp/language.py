@@ -1,9 +1,3 @@
-# from quranic_nlp import dependency_parsing as dp
-# from quranic_nlp import postagger as pt
-# from quranic_nlp import lemmatizer
-# from quranic_nlp import utils
-# from quranic_nlp import root
-
 from spacy.language import Language
 from spacy.tokens import Doc, Token
 import pandas as pd
@@ -30,22 +24,21 @@ def findSent(doc):
         files.sort(key=lambda f: int(''. join(filter(str. isdigit, f))))
         qSyntaxSemantics.append(files)
     global soure
-    global temp
+    global ayeh
     file = qSyntaxSemantics[soure - 1][ayeh - 1]
+    
     with open(file, encoding="utf-8") as f:
         data = json.load(f)
-
     nodes = data['Data']['ayeh']['node']['Data']
     nodes = pd.DataFrame(nodes)
     nodes.index = nodes["id"]
     nodes = nodes.sort_index()
+
     words = nodes['Word'].values
     spaces = np.full(len(words), True)
-
     for inx, (w, s) in enumerate(zip(words, nodes['xml'].apply(lambda x: x.split('Seq')[1].split('\"')[1] if x != None else None).values)):
         if s != None and int(s) == 2:
             spaces[inx - 1] = False
-
     global conv
     con = dict()
     for inx, id in enumerate(words):
@@ -71,7 +64,8 @@ class NLP():
     Doc.set_extension("revelation_order", default=None)
     Doc.set_extension("surah", default=None)
     Doc.set_extension("ayah", default=None)
-    Doc.set_extension("sentences", getter=findSent)
+    Doc.set_extension("sentences", default=None)
+    # Doc.set_extension("sentences", getter=findSent)
     Doc.set_extension("sim_ayahs", default=None)
     Doc.set_extension("text", default=None)
     Doc.set_extension("translations", default=None)
@@ -83,8 +77,7 @@ class NLP():
         nlp = spacy.blank(lang)
         self.nlp = nlp
 
-        self.dict = {'dep': 'dependancyparser',
-                     'pos': 'postagger', 'root': 'root', 'lem': 'lemmatize'}
+        self.dict = {'dep': 'dependancyparser', 'pos': 'postagger', 'root': 'root', 'lem': 'lemmatize'}
         self.pipelines = pipelines.split(',')
 
         self.nlp.add_pipe('Quran')
@@ -118,14 +111,14 @@ class NLP():
             global ayeh
             sent = Doc(nlp.vocab)
             text = doc.text
-            
             soure, ayeh = search_in_quran(text)
+            print(soure)
+            print(ayeh)
             
+            doc._.sentences = findSent(doc)
             sent = doc._.sentences
-            
             df = pd.read_csv(utils.QURAN_ORDER)
             df.index = df['index']
-
             sent._.revelation_order = df.loc[soure]['order_name']
             sent._.surah = df.loc[soure]['soure']
             sent._.ayah = ayeh
@@ -133,9 +126,10 @@ class NLP():
             sent._.translations = utils.get_translations(translationlang, soure, ayeh)
             sent._.sim_ayahs = utils.get_sim_ayahs(soure, ayeh)
             sent._.hadiths = utils.get_hadiths(soure, ayeh)
+            return sent
         except:
-            print()
-        return sent
+            raise Exception('not found:', 'soure=', soure, ',ayeh=', ayeh)
+
 
     @Language.component('dependancyparser', assigns=["token.dep"])
     def depparser(doc):
@@ -230,29 +224,28 @@ def search_in_quran(text):
     Returns:
         _type_: return soure and ayeh
     """
-    
+    sor = None
+    aye = None
     if '#' not in text:        
         rep = requests.post('https://hadith.ai/quranic_extraction/', json={"query": text, 'min_tok': 3, 'min_char': 3})        
         if rep.ok and rep.json()['output']['quran_id']:
             out = rep.json()['output']['quran_id'][0]
             #TODO : add ways -- now i use defaul 0
-            soure, ayeh = out[0].split('##')
-            soure, ayeh = int(soure), int(ayeh)            
+            sor, aye = out[0].split('##')
+            sor, aye = int(sor), int(aye)
+        else:
+            print(rep)         
 
     else:
         if not bool(re.search('[ا-ی]', text)):
-            soure, ayeh = text.split('#')
-            soure, ayeh = int(soure), int(ayeh)
-
+            sor, aye = text.split('#')
+            sor, aye = int(sor), int(aye)
         else:
-            soure_name, ayeh = text.split('#')
-            ayeh = int(ayeh)
-            soure = get_index_soure_from_name_soure(soure_name.strip())
-                
-    if ayeh and soure:
-        return soure, ayeh
-    else:
-        raise('not found'+text)
+            soure_name, aye = text.split('#')
+            aye = int(aye)
+            sor = get_index_soure_from_name_soure(soure_name.strip())
+    return sor, aye
+    
 
 def get_index_soure_from_name_soure(soure_name):
     if not str(soure_name).startswith('ال ') and str(soure_name).startswith('ال'):

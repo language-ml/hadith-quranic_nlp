@@ -15,7 +15,7 @@ def postagger(model, soure, ayeh):
     if soure == None:
         return None
     
-    ## in the name of god 
+    # in the name of god 
     if soure == 1 and ayeh == 1:
         with open(os.path.join(utils.AYEH_SEMANTIC, '1-1.json'), encoding="utf-8") as f:
             data = json.load(f)
@@ -33,15 +33,15 @@ def postagger(model, soure, ayeh):
     file = model[soure - 1]
     df = pd.read_excel(file)
 
-    # gb = df.groupby('Ayah')
-    # gb = [gb.get_group(x) for x in gb.groups]
+    gb = df.groupby('Ayah')
+    gb = [gb.get_group(x) for x in gb.groups]
        
     if soure == 1:
-        data = df[model['ayeh'] == ayeh - 2]
-    #     data = gb[ayeh - 2]
+        # data = df[model['ayeh'] == ayeh - 2]
+        data = gb[ayeh - 2]
     else:
-        data = df[model['ayeh'] == ayeh - 2]
-    #     data = gb[ayeh - 1]
+        # data = df[model['ayeh'] == ayeh - 2]
+        data = gb[ayeh - 1]
 
     data.index = data['id']
     

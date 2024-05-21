@@ -1,8 +1,27 @@
 import xml.etree.ElementTree as ET
 import requests
 import fnmatch
+import json
+
 import os
 import re
+
+# path, filename = os.path.split(os.path.realpath(__file__))
+def get_data_file_path(filename):
+    config_path = os.path.join(os.path.dirname(__file__), 'config/settings.json')
+    with open(config_path, 'r') as f:
+        config = json.load(f)
+    
+    data_directory = config['data_directory']
+    if not data_directory:
+        raise ValueError("Data directory is not set. Please download the data first.")
+    
+    return os.path.join(data_directory, filename)
+
+AYEH_SEMANTIC = get_data_file_path('qSyntaxSemantic/')
+AYEH_SYNTAX = get_data_file_path('syntax_data/')
+MORPHOLOGY = get_data_file_path('morphologhy.csv')
+QURAN_ORDER = get_data_file_path('quarn_order.csv')
 
 
 POS_FA_UNI = {'اسم': 'NOUN',
@@ -42,12 +61,6 @@ POS_UNI_FA = {'NOUN': 'اسم',
               'SYM': 'نماد',
               'X': 'دیگر'}
 
-path, filename = os.path.split(os.path.realpath(__file__))
-
-AYEH_SEMANTIC = path + '/data/qSyntaxSemantic/'
-AYEH_SYNTAX = path + '/data/syntax_data/'
-MORPHOLOGY = path + '/data/morphologhy.csv'
-QURAN_ORDER = path + '/data/quarn_order.csv'
 
 TRANSLATION = {
     'fa' : ['ansarian (Hussain Ansarian)', 'ayati (AbdolMohammad Ayati)', 'bahrampour (Abolfazl Bahrampour)', 'fooladvand (Mohammad Mahdi Fooladvand)', 'gharaati (Mohsen Gharaati)', 'ghomshei (Mahdi Elahi Ghomshei)', 'khorramdel (Mostafa Khorramdel)', "makarem (Baha'oddin Khorramshahi)", 'makarem (Naser Makarem Shirazi)', 'moezzi (Mohammad Kazem Moezzi)', 'mojtabavi (Sayyed Jalaloddin Mojtabavi)', 'sadeqi (Mohammad Sadeqi Tehrani)', 'safavi (Sayyed Mohammad Reza Safavi)'],
@@ -331,7 +344,8 @@ AYEH_INDEX = [['حمد', 'الفاتحه', 'ام القران', 'فاتحه ال
 
 def get_sim_ayahs(soure, ayeh):
     output = []
-    with open(path + '/data/sim_ayat.txt', encoding="utf-8") as file:
+    
+    with open(get_data_file_path('sim_ayat.txt'), encoding="utf-8") as file:
         sims = file.readlines()
         for sim in sims:
             ayeha = sim.split('\t')
@@ -344,7 +358,7 @@ def get_sim_ayahs(soure, ayeh):
     return output
 
 def get_text(soure, ayeh):
-    tree = ET.parse(os.path.join(path, 'data/quran.xml'))
+    tree = ET.parse(get_data_file_path('quran.xml'))
     root = tree.getroot()
 
     # Search for elements with a specific attribute value
@@ -360,7 +374,7 @@ def get_translations(input, soure, ayeh):
     if '#' in input:
         lang, index = input.split('#')
         name = TRANSLATION[lang][int(index)].split()[0]
-        filename = os.path.join(path + '/data/translate_quran', lang, name+'.txt')
+        filename = os.path.join(get_data_file_path('translate_quran'), lang, name+'.txt')
         with open(filename, encoding="utf-8") as file:
             txt = file.read()
         tempAyeh = ayeh
@@ -381,7 +395,7 @@ def get_translations(input, soure, ayeh):
         txt_traslation = []
         for names in TRANSLATION[lang]:
             name = names.split()[0]
-            filename = os.path.join(path + '/data/translate_quran', lang, name+'.txt')
+            filename = os.path.join(get_data_file_path('translate_quran'), lang, name+'.txt')
             with open(filename, encoding="utf-8") as file:
                 txt = file.read()
             start = re.search(f"{soure}\|{ayeh+1}\|", txt)
@@ -409,11 +423,16 @@ def recursive_glob(treeroot, pattern):
     return results
 
 def get_hadiths(soure, ayeh, filter_number = 10):
-    ids = requests.post('https://hadith.ai/get_hadith_content/get_ayah', json={"suraId": soure, "ayaId": ayeh}).json()
-    hadiths = requests.post('https://hadith.ai/get_hadith_content/create_hadith', json={  "hid": ids[:filter_number], "out_type": "json"}).json()
-    lst = []
-    for i in hadiths:
-        had = hadiths[i]
-        text = had['narrators'] + '\n' + had['hadith'] + '\n' + had['translation_text']
-        lst.append(text) 
-    return lst
+    try:
+        ids = requests.post('https://hadith.ai/get_hadith_content/get_ayah', json={"suraId": soure, "ayaId": ayeh}).json()
+        hadiths = requests.post('https://hadith.ai/get_hadith_content/create_hadith', json={  "hid": ids[:filter_number], "out_type": "json"}).json()
+        lst = []
+        for i in hadiths:
+            had = hadiths[i]
+            text = had['narrators'] + '\n' + had['hadith'] + '\n' + had['translation_text']
+            lst.append(text) 
+        return lst
+    except:
+        print('Error to get hadiths')
+        return None
+

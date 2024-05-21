@@ -10,6 +10,27 @@ data_url = os.getenv("URL_DATA_NEED_QURANIC_PACKAGE")
 name_file = os.getenv("NAME_FILE_NEED_QURANIC_PACKAGE")
 destination_folder = os.path.join(os.getcwd(), os.getenv("DIRECTORY_DATA_NEED_QURANIC_PACKAGE"))
 
+import os
+import json
+import requests
+
+def download_data():
+    data_directory = os.path.join(os.path.dirname(__file__), destination_folder)    
+    os.makedirs(data_directory, exist_ok=True)
+    
+    # دانلود فایل‌ها
+    download_and_extract_data(data_url, data_directory)
+    
+    # به‌روزرسانی فایل پیکربندی
+    config_path = os.path.join(os.path.dirname(__file__), 'config/settings.json')
+    with open(config_path, 'r') as f:
+        config = json.load(f)
+    
+    config['data_directory'] = data_directory
+    
+    with open(config_path, 'w') as f:
+        json.dump(config, f)
+
 
 def download_and_extract_data(data_url, destination_folder):
     print('requsete started')
@@ -38,4 +59,4 @@ def download_and_extract_data(data_url, destination_folder):
         os.remove(name_file)
         print("خطا در دانلود داده‌ها!")
 
-download_and_extract_data(data_url, destination_folder)
+download_data()
