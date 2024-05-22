@@ -1,0 +1,8 @@
+include README.md LICENSE MANIFEST.in d
+include docs/image_readme/fig.png
+include docs/image_readme/fig2.png
+include setup.py
+include quranic_nlp/VERSION
+include quranic_nlp/*.py
+include tests/*.py
+global-exclude *~

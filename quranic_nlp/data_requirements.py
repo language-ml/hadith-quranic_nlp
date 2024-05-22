@@ -59,4 +59,9 @@ def download_and_extract_data(data_url, destination_folder):
         os.remove(name_file)
         print("خطا در دانلود داده‌ها!")
 
-download_data()
+
+def main(): 
+    download_data()
+
+if __name__=="__main__": 
+    main() 

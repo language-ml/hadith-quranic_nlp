@@ -1,8 +1,6 @@
 import pandas as pd
-import json
-import os
-# from quranic_nlp import utils
-import utils
+from quranic_nlp import utils
+# import utils
 
 
 def load_model():

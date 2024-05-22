@@ -11,7 +11,8 @@ import postagger as pt
 import lemmatizer
 import root
 import requests
-import utils
+from quranic_nlp import utils
+# import utils
 
 soure = None
 ayeh = None

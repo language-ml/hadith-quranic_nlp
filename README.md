@@ -348,8 +348,8 @@ options = {"compact": True, "bg": "#09a3d5",
 displacy.serve(doc, style="dep", options=options)
 
 ```
-![](./src/quranic_nlp/data/fig.png "")
-![](./src/quranic_nlp/data/fig2.png "")
+![](./docs/image_readme/fig.png "")
+![](./docs/image_readme/fig2.png "")
 
 ## Bibles
 ```python
