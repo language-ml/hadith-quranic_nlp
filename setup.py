@@ -28,13 +28,13 @@ from setuptools import setup
 
 CLASSIFIERS = [ 'Development Status :: 5 - Production/Stable', 'Environment :: Console', 'Intended Audience :: Developers', 'Intended Audience :: Education', 'Intended Audience :: Information Technology', 'Intended Audience :: Science/Research', 'License :: OSI Approved :: MIT License', 'Natural Language :: Arabic', 'Operating System :: OS Independent', 'Programming Language :: Python :: 3', 'Programming Language :: Python :: 3 :: Only', 'Programming Language :: Python :: 3.7', 'Programming Language :: Python :: 3.8', 'Programming Language :: Python :: 3.9', 'Programming Language :: Python :: 3.10', 'Topic :: Scientific/Engineering', 'Topic :: Scientific/Engineering :: Artificial Intelligence', 'Topic :: Scientific/Engineering :: Information Analysis', 'Topic :: Text Processing' ]
 
-INSTALL_REQUIRES = ['spacy', 'pandas', 'numpy', 'openpyxl', 'zipfile', 'requests', 'python-dotenv'],
+INSTALL_REQUIRES = ['spacy', 'pandas', 'numpy', 'openpyxl', 'requests', 'clint','python-dotenv'],
 
 DESCRIPTION = ("quarnic nlp")
 
 ######################  Version Package
 VERSION_FILE = os.path.join(os.path.dirname(__file__),
-                            'camel_tools',
+                            'quranic_nlp',
                             'VERSION')
 with open(VERSION_FILE, encoding='utf-8') as version_fp:
     VERSION = version_fp.read().strip()
@@ -59,7 +59,7 @@ setup(
     include_package_data=True,
     entry_points={
         'console_scripts': [
-            'quranic_data=quranic_nlp.scripts.data_requirements:main',
+            'quranic_data=quranic_nlp.data_requirements:main',
         ],
     },
     
@@ -78,22 +78,3 @@ setup(
 # if sys.platform != 'win32':
 #     INSTALL_REQUIRES.extend(INSTALL_REQUIRES_NOT_WINDOWS)
 
-
-entry_points={
-    'console_scripts': [
-        ('camel_transliterate='
-            'camel_tools.cli.camel_transliterate:main'),
-        ('camel_arclean='
-            'camel_tools.cli.camel_arclean:main'),
-        ('camel_morphology='
-            'camel_tools.cli.camel_morphology:main'),
-        ('camel_dediac='
-            'camel_tools.cli.camel_dediac:main'),
-        ('camel_word_tokenize='
-            'camel_tools.cli.camel_word_tokenize:main'),
-        ('camel_diac='
-            'camel_tools.cli.camel_diac:main'),
-        ('camel_data='
-            'camel_tools.cli.camel_data:main'),
-    ],
-}

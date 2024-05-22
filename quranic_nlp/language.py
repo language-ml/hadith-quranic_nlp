@@ -2,16 +2,20 @@ from spacy.language import Language
 from spacy.tokens import Doc, Token
 import pandas as pd
 import numpy as np
+import requests
 import spacy
 import json
 import re
 
-import dependency_parsing as dp
-import postagger as pt
-import lemmatizer
-import root
-import requests
+from quranic_nlp import dependency_parsing as dp
+from quranic_nlp import postagger as pt
+from quranic_nlp import lemmatizer
+from quranic_nlp import root
 from quranic_nlp import utils
+# import dependency_parsing as dp
+# import postagger as pt
+# import lemmatizer
+# import root
 # import utils
 
 soure = None
@@ -22,6 +26,8 @@ def findSent(doc):
     qSyntaxSemantics = []
     for i in range(1, 115):
         files = utils.recursive_glob(utils.AYEH_SEMANTIC, f'{i}-*.json')
+        if len(files) == 0:
+            raise('data not downloaded')
         files.sort(key=lambda f: int(''. join(filter(str. isdigit, f))))
         qSyntaxSemantics.append(files)
     global soure

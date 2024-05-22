@@ -8,21 +8,24 @@ load_dotenv()
 
 data_url = os.getenv("URL_DATA_NEED_QURANIC_PACKAGE")
 name_file = os.getenv("NAME_FILE_NEED_QURANIC_PACKAGE")
-destination_folder = os.path.join(os.getcwd(), os.getenv("DIRECTORY_DATA_NEED_QURANIC_PACKAGE"))
-
+destination_folder = os.getenv("DIRECTORY_DATA_NEED_QURANIC_PACKAGE")
+print(destination_folder)
 import os
 import json
 import requests
 
 def download_data():
-    data_directory = os.path.join(os.path.dirname(__file__), destination_folder)    
+    data_directory = os.path.join(os.path.dirname(os.path.realpath(__file__)), destination_folder)
+    print(data_directory)
+    
     os.makedirs(data_directory, exist_ok=True)
     
     # دانلود فایل‌ها
     download_and_extract_data(data_url, data_directory)
     
     # به‌روزرسانی فایل پیکربندی
-    config_path = os.path.join(os.path.dirname(__file__), 'config/settings.json')
+    config_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config/settings.json')
+    print(config_path)
     with open(config_path, 'r') as f:
         config = json.load(f)
     
