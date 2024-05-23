@@ -1,66 +1,25 @@
 from spacy.language import Language
 from spacy.tokens import Doc, Token
-import pandas as pd
-import numpy as np
-import requests
 import spacy
-import json
-import re
 
 from quranic_nlp import dependency_parsing as dp
 from quranic_nlp import postagger as pt
 from quranic_nlp import lemmatizer
 from quranic_nlp import root
 from quranic_nlp import utils
+from quranic_nlp import constant
 # import dependency_parsing as dp
 # import postagger as pt
 # import lemmatizer
 # import root
+# import constant
 # import utils
 
 soure = None
 ayeh = None
 
-def findSent(doc):
-
-    qSyntaxSemantics = []
-    for i in range(1, 115):
-        files = utils.recursive_glob(utils.AYEH_SEMANTIC, f'{i}-*.json')
-        if len(files) == 0:
-            raise('data not downloaded')
-        files.sort(key=lambda f: int(''. join(filter(str. isdigit, f))))
-        qSyntaxSemantics.append(files)
-    global soure
-    global ayeh
-    file = qSyntaxSemantics[soure - 1][ayeh - 1]
-    
-    with open(file, encoding="utf-8") as f:
-        data = json.load(f)
-    nodes = data['Data']['ayeh']['node']['Data']
-    nodes = pd.DataFrame(nodes)
-    nodes.index = nodes["id"]
-    nodes = nodes.sort_index()
-
-    words = nodes['Word'].values
-    spaces = np.full(len(words), True)
-    for inx, (w, s) in enumerate(zip(words, nodes['xml'].apply(lambda x: x.split('Seq')[1].split('\"')[1] if x != None else None).values)):
-        if s != None and int(s) == 2:
-            spaces[inx - 1] = False
-    global conv
-    con = dict()
-    for inx, id in enumerate(words):
-        con[id] = inx
-    conv = con
-
-    doc = Doc(nlp.vocab, words=words, spaces=spaces)
-    return doc
-
-
 class NLP():
-    """
-    In this class a blank pipeline in created and it is initialized based on our trained models
-    possible pipelines: [ dependancyparser ]
-    """
+
     postagger_model = None
     depparser_model = None
     lemma_model = None
@@ -68,11 +27,10 @@ class NLP():
 
     Token.set_extension("dep_arc", default=None)
     Token.set_extension("root", default=None)
+    Doc.set_extension("sentences", default=None)
     Doc.set_extension("revelation_order", default=None)
     Doc.set_extension("surah", default=None)
     Doc.set_extension("ayah", default=None)
-    Doc.set_extension("sentences", default=None)
-    # Doc.set_extension("sentences", getter=findSent)
     Doc.set_extension("sim_ayahs", default=None)
     Doc.set_extension("text", default=None)
     Doc.set_extension("translations", default=None)
@@ -114,20 +72,21 @@ class NLP():
     @Language.component('Quran')
     def initQuran(doc):
         try:
+            # sent = Doc(nlp.vocab)
             global soure
             global ayeh
-            sent = Doc(nlp.vocab)
             text = doc.text
-            soure, ayeh = search_in_quran(text)
-            print(soure)
-            print(ayeh)
-            
-            doc._.sentences = findSent(doc)
+            soure, ayeh = utils.search_in_quran(text)
+            print('soure:', soure, ', ayeh:', ayeh)
+            words, spaces = utils.get_words_and_spaces(soure, ayeh)
+            # print(words)
+            # print(spaces)
+            doc._.sentences = Doc(nlp.vocab, words=words, spaces=spaces)
             sent = doc._.sentences
-            df = pd.read_csv(utils.QURAN_ORDER)
-            df.index = df['index']
-            sent._.revelation_order = df.loc[soure]['order_name']
-            sent._.surah = df.loc[soure]['soure']
+            
+            
+            sent._.revelation_order = utils.get_revelation_order(soure)
+            sent._.surah = utils.get_sourah_name_from_soure_index(soure)
             sent._.ayah = ayeh
             sent._.text = utils.get_text(soure, ayeh)
             sent._.translations = utils.get_translations(translationlang, soure, ayeh)
@@ -150,7 +109,7 @@ class NLP():
                     rel = out['rel']
                     d.dep_ = rel
                     d._.dep_arc = arc
-                    d.head = doc[conv[head]]
+                    d.head = doc[utils.get_indexes_from_words(soure, ayeh)[head]]
 
         return doc
 
@@ -161,7 +120,7 @@ class NLP():
         if output:
             for d, tags in zip(doc, output):
                 if 'pos' in tags:
-                    d.pos_ = utils.POS_FA_UNI[tags['pos']]
+                    d.pos_ = constant.POS_FA_UNI[tags['pos']]
 
         return doc
 
@@ -217,53 +176,3 @@ def to_json(pipelines, doc):
             dictionary['head'] = d.head
         dict_list.append(dictionary)
     return dict_list
-
-
-def search_in_quran(text):
-    """
-     search in quran:
-        - when # not in text => search text in all quran 
-        - when # in text => search index ayeh
-
-    Args:
-        text (_type_): this is input for search in quran with multi ways
-
-    Returns:
-        _type_: return soure and ayeh
-    """
-    sor = None
-    aye = None
-    if '#' not in text:        
-        rep = requests.post('https://hadith.ai/quranic_extraction/', json={"query": text, 'min_tok': 3, 'min_char': 3})        
-        if rep.ok and rep.json()['output']['quran_id']:
-            out = rep.json()['output']['quran_id'][0]
-            #TODO : add ways -- now i use defaul 0
-            sor, aye = out[0].split('##')
-            sor, aye = int(sor), int(aye)
-        else:
-            print(rep)         
-
-    else:
-        if not bool(re.search('[ا-ی]', text)):
-            sor, aye = text.split('#')
-            sor, aye = int(sor), int(aye)
-        else:
-            soure_name, aye = text.split('#')
-            aye = int(aye)
-            sor = get_index_soure_from_name_soure(soure_name.strip())
-    return sor, aye
-    
-
-def get_index_soure_from_name_soure(soure_name):
-    if not str(soure_name).startswith('ال ') and str(soure_name).startswith('ال'):
-        soure_name = soure_name[2:]
-    rep = requests.post('https://hadith.ai/preprocessing/', json={"query": soure_name, "dediac": 'true'})
-    if rep.ok:
-        soure_name = rep.json()['output']
-
-    soure = None
-    for inx, output in enumerate(utils.AYEH_INDEX):
-        if soure_name in output: 
-            soure = inx + 1
-    return soure                
-    

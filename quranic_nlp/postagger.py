@@ -2,11 +2,13 @@ import pandas as pd
 import json
 import os
 from quranic_nlp import utils
+from quranic_nlp import constant
 # import utils
+# import constant
 
 
 def load_model():
-    syntax_data = utils.recursive_glob(utils.AYEH_SYNTAX, '*.xlsx')
+    syntax_data = utils.recursive_glob(constant.AYEH_SYNTAX, '*.xlsx')
     syntax_data.sort()
     return syntax_data
 
@@ -17,7 +19,7 @@ def postagger(model, soure, ayeh):
     
     # in the name of god 
     if soure == 1 and ayeh == 1:
-        with open(os.path.join(utils.AYEH_SEMANTIC, '1-1.json'), encoding="utf-8") as f:
+        with open(os.path.join(constant.AYEH_SEMANTIC, '1-1.json'), encoding="utf-8") as f:
             data = json.load(f)
         data = data['Data']['ayeh']['node']['Data']
         output = []

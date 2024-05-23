@@ -1,13 +1,15 @@
 import pandas as pd
 import json
 from quranic_nlp import utils
+from quranic_nlp import constant
 # import utils
+# import constant
 
 
 def load_model():
     qSyntaxSemantics = []
     for i in range(1, 115):
-        files = utils.recursive_glob(utils.AYEH_SEMANTIC, f'{i}-*.json')
+        files = utils.recursive_glob(constant.AYEH_SEMANTIC, f'{i}-*.json')
         files.sort(key=lambda f: int(''. join(filter(str. isdigit, f))))
         # datas = []
         # for file in files:

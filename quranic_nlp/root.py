@@ -1,9 +1,9 @@
 import pandas as pd
-from quranic_nlp import utils
-# import utils
+from quranic_nlp import constant
+# import constant
 
 def load_model():
-    morphologhy = pd.read_csv(utils.MORPHOLOGY)
+    morphologhy = pd.read_csv(constant.MORPHOLOGY)
     morphologhy = morphologhy.fillna('')
     return morphologhy
 
