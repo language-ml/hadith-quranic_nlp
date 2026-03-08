@@ -1,3 +1,9 @@
+"""
+quranic_nlp.language
+~~~~~~~~~~~~~~~~~~~~
+spaCy-based pipeline for Quranic NLP.
+"""
+
 from spacy.language import Language
 from spacy.tokens import Doc, Token
 import spacy
@@ -8,171 +14,222 @@ from quranic_nlp import lemmatizer
 from quranic_nlp import root
 from quranic_nlp import utils
 from quranic_nlp import constant
-# import dependency_parsing as dp
-# import postagger as pt
-# import lemmatizer
-# import root
-# import constant
-# import utils
 
-soure = None
-ayeh = None
 
-class NLP():
+def _register_extensions():
+    """Register spaCy custom extensions, skipping already-registered ones."""
+    for name in ('dep_arc', 'root'):
+        if not Token.has_extension(name):
+            Token.set_extension(name, default=None)
 
-    postagger_model = None
-    depparser_model = None
-    lemma_model = None
-    root_model = None
+    for name in ('sentences', 'revelation_order', 'surah', 'ayah',
+                 'sim_ayahs', 'text', 'translations', 'hadiths',
+                 'soure_index', 'ayeh_index'):
+        if not Doc.has_extension(name):
+            Doc.set_extension(name, default=None)
 
-    Token.set_extension("dep_arc", default=None)
-    Token.set_extension("root", default=None)
-    Doc.set_extension("sentences", default=None)
-    Doc.set_extension("revelation_order", default=None)
-    Doc.set_extension("surah", default=None)
-    Doc.set_extension("ayah", default=None)
-    Doc.set_extension("sim_ayahs", default=None)
-    Doc.set_extension("text", default=None)
-    Doc.set_extension("translations", default=None)
-    Doc.set_extension("hadiths", default=None)
 
-    def __init__(self, lang, pipelines, translation_lang):
+_register_extensions()
 
-        global nlp
-        nlp = spacy.blank(lang)
+# Module-level vocab shared across pipeline components
+_vocab = spacy.blank('ar').vocab
+_translation_lang = None
+_depparser_model = None
+_postagger_model = None
+_lemma_model = None
+_root_model = None
+
+
+@Language.component('Quran')
+def _init_quran(doc):
+    text = doc.text
+    soure, ayeh = utils.search_in_quran(text)
+    print(f'surah: {soure}, ayah: {ayeh}')
+
+    words, spaces = utils.get_words_and_spaces(soure, ayeh)
+    sent = Doc(_vocab, words=words, spaces=spaces)
+
+    sent._.soure_index = soure
+    sent._.ayeh_index = ayeh
+    sent._.revelation_order = utils.get_revelation_order(soure)
+    sent._.surah = utils.get_sourah_name_from_soure_index(soure)
+    sent._.ayah = ayeh
+    sent._.text = utils.get_text(soure, ayeh)
+    sent._.translations = utils.get_translations(_translation_lang, soure, ayeh)
+    sent._.sim_ayahs = utils.get_sim_ayahs(soure, ayeh)
+    sent._.hadiths = utils.get_hadiths(soure, ayeh)
+    return sent
+
+
+@Language.component('dependancyparser', assigns=['token.dep'])
+def _dep_parser(doc):
+    soure = doc._.soure_index
+    ayeh = doc._.ayeh_index
+    if soure is None:
+        return doc
+    output = dp.depparser(_depparser_model, soure, ayeh)
+    if output:
+        word_index = utils.get_indexes_from_words(soure, ayeh)
+        for token, out in zip(doc, output):
+            if 'head' in out:
+                token.dep_ = out['rel']
+                token._.dep_arc = out['arc']
+                token.head = doc[word_index[out['head']]]
+    return doc
+
+
+@Language.component('postagger', assigns=['token.pos'])
+def _post_tagger(doc):
+    soure = doc._.soure_index
+    ayeh = doc._.ayeh_index
+    if soure is None:
+        return doc
+    output = pt.postagger(_postagger_model, soure, ayeh)
+    if output:
+        for token, tags in zip(doc, output):
+            if 'pos' in tags:
+                token.pos_ = constant.POS_FA_UNI[tags['pos']]
+    return doc
+
+
+@Language.component('lemmatize', assigns=['token.lemma'])
+def _lemmatizer(doc):
+    soure = doc._.soure_index
+    ayeh = doc._.ayeh_index
+    if soure is None:
+        return doc
+    output = lemmatizer.lemma(_lemma_model, soure, ayeh)
+    if output:
+        for token, tags in zip(doc, output):
+            if 'lemma' in tags:
+                token.lemma_ = tags['lemma']
+    return doc
+
+
+@Language.component('root')
+def _rooter(doc):
+    soure = doc._.soure_index
+    ayeh = doc._.ayeh_index
+    if soure is None:
+        return doc
+    output = root.root(_root_model, soure, ayeh)
+    if output:
+        for token, tags in zip(doc, output):
+            if 'root' in tags:
+                token._.root = tags['root']
+    return doc
+
+
+class NLP:
+    """
+    Quranic NLP pipeline wrapping a spaCy blank Arabic model.
+
+    Parameters
+    ----------
+    pipelines : str
+        Comma-separated pipeline component names. Valid values:
+        ``dep`` (dependency parsing), ``pos`` (POS tagging),
+        ``root`` (root extraction), ``lem`` (lemmatization).
+    translation_lang : str, optional
+        Translation language/index string, e.g. ``'fa#1'`` or ``'en#3'``.
+        Run ``utils.print_all_translations()`` to see all options.
+    """
+
+    def __init__(self, pipelines: str, translation_lang: str = None):
+        global _vocab, _translation_lang
+        global _depparser_model, _postagger_model, _lemma_model, _root_model
+
+        nlp = spacy.blank('ar')
+        _vocab = nlp.vocab
+        _translation_lang = translation_lang
         self.nlp = nlp
-
-        self.dict = {'dep': 'dependancyparser', 'pos': 'postagger', 'root': 'root', 'lem': 'lemmatize'}
-        self.pipelines = pipelines.split(',')
+        self.pipelines = pipelines
 
         self.nlp.add_pipe('Quran')
-        global translationlang
-        translationlang = translation_lang
 
-        if ('dep') in pipelines:
-            global depparser_model
-            depparser_model = dp.load_model()
+        if 'dep' in pipelines:
+            _depparser_model = dp.load_model()
             self.nlp.add_pipe('dependancyparser')
 
-        if ('pos') in pipelines:
-            global postagger_model
-            postagger_model = pt.load_model()
+        if 'pos' in pipelines:
+            _postagger_model = pt.load_model()
             self.nlp.add_pipe('postagger')
 
         if 'lem' in pipelines:
-            global lemma_model
-            lemma_model = lemmatizer.load_model()
+            _lemma_model = lemmatizer.load_model()
             self.nlp.add_pipe('lemmatize')
 
         if 'root' in pipelines:
-            global root_model
-            root_model = root.load_model()
+            _root_model = root.load_model()
             self.nlp.add_pipe('root')
 
-    @Language.component('Quran')
-    def initQuran(doc):
-        try:
-            # sent = Doc(nlp.vocab)
-            global soure
-            global ayeh
-            text = doc.text
-            soure, ayeh = utils.search_in_quran(text)
-            print('soure:', soure, ', ayeh:', ayeh)
-            words, spaces = utils.get_words_and_spaces(soure, ayeh)
-            # print(words)
-            # print(spaces)
-            doc._.sentences = Doc(nlp.vocab, words=words, spaces=spaces)
-            sent = doc._.sentences
-            
-            
-            sent._.revelation_order = utils.get_revelation_order(soure)
-            sent._.surah = utils.get_sourah_name_from_soure_index(soure)
-            sent._.ayah = ayeh
-            sent._.text = utils.get_text(soure, ayeh)
-            sent._.translations = utils.get_translations(translationlang, soure, ayeh)
-            sent._.sim_ayahs = utils.get_sim_ayahs(soure, ayeh)
-            sent._.hadiths = utils.get_hadiths(soure, ayeh)
-            return sent
-        except:
-            raise Exception('not found:', 'soure=', soure, ',ayeh=', ayeh)
+
+class Pipeline:
+    """
+    Convenience factory that returns a configured spaCy ``Language`` object.
+
+    Parameters
+    ----------
+    pipeline : str
+        Comma-separated pipeline names (e.g. ``'dep,pos,root,lem'``).
+    translation_lang : str, optional
+        Translation language/index (e.g. ``'fa#1'``).
+
+    Returns
+    -------
+    spacy.Language
+
+    Example
+    -------
+    ::
+
+        from quranic_nlp import language
+
+        nlp = language.Pipeline('dep,pos,root,lem', 'fa#1')
+        doc = nlp('1#1')
+        print(doc._.surah)
+        print(doc._.translations)
+    """
+
+    def __new__(cls, pipeline: str, translation_lang: str = None):
+        return NLP(pipeline, translation_lang).nlp
 
 
-    @Language.component('dependancyparser', assigns=["token.dep"])
-    def depparser(doc):
-
-        output = dp.depparser(depparser_model, soure, ayeh)
-        if output:
-            for d, out in zip(doc, output):
-                if 'head' in out:
-                    head = out['head']
-                    arc = out['arc']
-                    rel = out['rel']
-                    d.dep_ = rel
-                    d._.dep_arc = arc
-                    d.head = doc[utils.get_indexes_from_words(soure, ayeh)[head]]
-
-        return doc
-
-    @Language.component('postagger', assigns=["token.pos"])
-    def postagger(doc):
-
-        output = pt.postagger(postagger_model, soure, ayeh)
-        if output:
-            for d, tags in zip(doc, output):
-                if 'pos' in tags:
-                    d.pos_ = constant.POS_FA_UNI[tags['pos']]
-
-        return doc
-
-    @Language.component('lemmatize', assigns=["token.lemma"])
-    def lemmatizer(doc):
-
-        output = lemmatizer.lemma(lemma_model, soure, ayeh)
-        if output:        
-            for d, tags in zip(doc, output):
-                if 'lemma' in tags:
-                    d.lemma_ = tags['lemma']
-        return doc
-
-    @Language.component('root')
-    def rooter(doc):
-
-        output = root.root(root_model, soure, ayeh)
-        if output:
-            for d, tags in zip(doc, output):
-                if 'root' in tags:
-                    d._.root = tags['root']
-        return doc
+def load_pipeline(pipelines: str, translation_lang: str = None):
+    """Load and return a pipeline (alias for ``Pipeline``)."""
+    return NLP(pipelines, translation_lang).nlp
 
 
-class Pipeline():
-    def __new__(cls, pipeline, translation_lang=None):
-        language = NLP('ar', pipeline, translation_lang)
-        nlp = language.nlp
-        return nlp
+def to_json(pipelines: str, doc) -> list:
+    """
+    Serialize a processed ``Doc`` to a list of per-token dictionaries.
 
+    Parameters
+    ----------
+    pipelines : str
+        Comma-separated pipeline names used during processing.
+    doc :
+        A processed spaCy ``Doc``.
 
-def load_pipline(pipelines):
-    language = NLP('ar', pipelines)
-    nlp = language.nlp
-    return nlp
-
-
-def to_json(pipelines, doc):
-    dict_list = []
-    for i, d in enumerate(doc):
-        dictionary = {}
-        dictionary['id'] = i+1
-        dictionary['text'] = d
+    Returns
+    -------
+    list[dict]
+        Each dict contains at minimum ``id`` and ``text``, plus optional
+        fields ``root``, ``lemma``, ``pos``, ``rel``, ``arc``, ``head``
+        depending on which pipelines were active.
+    """
+    result = []
+    for i, token in enumerate(doc):
+        entry = {'id': i + 1, 'text': token}
         if 'root' in pipelines:
-            dictionary['root'] = d._.root
-        if 'lemma' in pipelines:
-            dictionary['lemma'] = d.lemma_
+            entry['root'] = token._.root
+        if 'lem' in pipelines:
+            entry['lemma'] = token.lemma_
         if 'pos' in pipelines:
-            dictionary['pos'] = d.pos_
+            entry['pos'] = token.pos_
         if 'dep' in pipelines:
-            dictionary['rel'] = d.dep_
-            dictionary['arc'] = d._.dep_arc
-            dictionary['head'] = d.head
-        dict_list.append(dictionary)
-    return dict_list
+            entry['rel'] = token.dep_
+            entry['arc'] = token._.dep_arc
+            entry['head'] = token.head
+        result.append(entry)
+    return result

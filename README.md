@@ -54,6 +54,37 @@ pip install quranic-nlp
 
 You can check the `requirements.txt` file to see the required packages.
 
+## Virtual Environment
+
+It is recommended to use a virtual environment:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate   # On Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+pip install -e .
+```
+
+## Data Setup
+
+The library requires data files that must be downloaded separately.
+
+1. Copy `.env.example` to `.env` and fill in the required values:
+   ```bash
+   cp .env.example .env
+   ```
+2. Edit `.env` with the correct data URL (contact the maintainer for access).
+3. Download the data:
+   ```bash
+   quranic_data
+   ```
+   Or from Python:
+   ```python
+   from quranic_nlp.data_requirements import download_data
+   download_data()
+   ```
+   Data will be stored in `quranic_nlp/data/` by default.
+
 ## Pipeline
 
 The NLP pipeline contains morphological information e.g., Lemmatizer as well as POS Tagger and Dependancy Parser in a `Spacy`-like pipeline.
@@ -195,13 +226,13 @@ print(second_doc._.surah)
 print(second_doc._.ayah)
 ```
 ```python
-1
+200
 ```
 ```python
 print(second_doc._.revelation_order)
 ```
 ```python
-200
+89
 ```
 ```python
 print(second_doc._.translations)
@@ -255,7 +286,7 @@ print(word.lemma_)
 ```
 ```python
 print(word.pos_)
-import utils
+from quranic_nlp import utils
 print(utils.POS_UNI_FA[word.pos_])
 ```
 ```python
@@ -304,7 +335,7 @@ print(word.lemma_)
 ```
 ```python
 print(word.pos_)
-import utils
+from quranic_nlp import utils
 print(utils.POS_UNI_FA[word.pos_])
 ```
 ```python

@@ -1,37 +1,22 @@
 import pandas as pd
 from quranic_nlp import constant
-# import constant
 
 
 def load_model():
-    morphologhy = pd.read_csv(constant.MORPHOLOGY)
-    morphologhy = morphologhy.fillna('')
-    return morphologhy
+    """Load and return the morphology CSV as a DataFrame."""
+    morphology = pd.read_csv(constant.MORPHOLOGY)
+    return morphology.fillna('')
 
 
 def lemma(model, soure, ayeh):
-    if soure == None:
+    """Return per-token lemma dicts for the given verse."""
+    if soure is None:
         return None
-    
     data = model[(model['soure'] == soure - 1) & (model['ayeh'] == ayeh - 1)]
-    # gb_soure = model.groupby('soure')
-    # gb_soure = [gb_soure.get_group(x) for x in gb_soure.groups]
-    # df = gb_soure[soure - 1]
-
-    # gb = df.groupby('ayeh')
-    # gb = [gb.get_group(x) for x in gb.groups]
-    # data = gb[ayeh - 1]
-
     output = []
-    for lemma in data['Lemma']:
-        out = dict()
+    for lem_value in data['Lemma']:
         try:
-            if lemma:
-                out['lemma'] = lemma
-            else:
-                out['lemma'] = ''
-            output.append(out)
-        except:
-            output.append(out)
-
+            output.append({'lemma': lem_value if lem_value else ''})
+        except Exception:
+            output.append({})
     return output

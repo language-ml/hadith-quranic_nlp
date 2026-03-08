@@ -1,35 +1,22 @@
 import pandas as pd
 from quranic_nlp import constant
-# import constant
+
 
 def load_model():
-    morphologhy = pd.read_csv(constant.MORPHOLOGY)
-    morphologhy = morphologhy.fillna('')
-    return morphologhy
+    """Load and return the morphology CSV as a DataFrame."""
+    morphology = pd.read_csv(constant.MORPHOLOGY)
+    return morphology.fillna('')
+
 
 def root(model, soure, ayeh):
-    if soure == None:
+    """Return per-token root dicts for the given verse."""
+    if soure is None:
         return None
-    
     data = model[(model['soure'] == soure - 1) & (model['ayeh'] == ayeh - 1)]
-    # gb_soure = model.groupby('soure')
-    # gb_soure = [gb_soure.get_group(x) for x in gb_soure.groups]
-    # df = gb_soure[soure - 1]
-
-    # gb = df.groupby('ayeh')
-    # gb = [gb.get_group(x) for x in gb.groups]
-    # data = gb[ayeh - 1]
-
     output = []
-    for root in data['Root']:
-        out = dict()
+    for root_value in data['Root']:
         try:
-            if root:
-                out['root'] = root
-            else:
-                out['root'] = ''
-            output.append(out)
-        except:
-            output.append(out)
-
+            output.append({'root': root_value if root_value else ''})
+        except Exception:
+            output.append({})
     return output
