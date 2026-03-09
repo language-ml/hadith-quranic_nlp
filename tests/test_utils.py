@@ -29,7 +29,6 @@ class TestSearchInQuran:
             mock_resp.ok = True
             mock_resp.json.return_value = {'output': 'حمد'}
             mock_post.return_value = mock_resp
-            # get_index_soure_from_name_soure will be called; patch its result
             with patch('quranic_nlp.utils.get_index_soure_from_name_soure', return_value=1):
                 soure, ayeh = utils.search_in_quran('حمد#1')
         assert soure == 1
@@ -40,7 +39,7 @@ class TestSearchInQuran:
         mock_response = MagicMock()
         mock_response.ok = True
         mock_response.json.return_value = {
-            'output': {'quran_id': [['1##1']]}
+            'output': {'regex_qe': {'quran_id': [['1##1']]}}
         }
         with patch('quranic_nlp.utils.requests.post', return_value=mock_response):
             soure, ayeh = utils.search_in_quran('بسم الله')
@@ -55,6 +54,28 @@ class TestSearchInQuran:
         with patch('quranic_nlp.utils.requests.post', return_value=mock_response):
             with pytest.raises(ValueError):
                 utils.search_in_quran('xyz not arabic')
+
+
+class TestSearchAllInQuran:
+    def test_returns_list_of_tuples(self):
+        mock_response = MagicMock()
+        mock_response.ok = True
+        mock_response.json.return_value = {
+            'output': {'regex_qe': {'quran_id': [['1##2', '5##28']]}}
+        }
+        with patch('quranic_nlp.utils.requests.post', return_value=mock_response):
+            result = utils.search_all_in_quran('رب العالمین')
+        assert isinstance(result, list)
+        assert (1, 2) in result
+        assert (5, 28) in result
+
+    def test_raises_when_no_matches(self):
+        mock_response = MagicMock()
+        mock_response.ok = True
+        mock_response.json.return_value = {'output': {'quran_id': []}}
+        with patch('quranic_nlp.utils.requests.post', return_value=mock_response):
+            with pytest.raises(ValueError):
+                utils.search_all_in_quran('xyz')
 
 
 class TestGetIndexSoureFromNameSoure:
@@ -77,18 +98,6 @@ class TestGetIndexSoureFromNameSoure:
             mock_post.return_value = mock_resp
             with pytest.raises(ValueError):
                 utils.get_index_soure_from_name_soure('notasurah')
-
-    def test_strips_al_prefix(self):
-        """'الفاتحه' should strip 'ال' prefix before lookup."""
-        with patch('quranic_nlp.utils.requests.post') as mock_post:
-            mock_resp = MagicMock()
-            mock_resp.ok = True
-            mock_resp.json.return_value = {'output': 'الفاتحه'}
-            mock_post.return_value = mock_resp
-            with patch('quranic_nlp.utils.get_index_soure_from_name_soure',
-                       wraps=utils.get_index_soure_from_name_soure):
-                # Just ensure no crash
-                pass
 
 
 class TestGetHadiths:
@@ -138,3 +147,25 @@ class TestGetTranslations:
 
     def test_returns_empty_for_empty_string(self):
         assert utils.get_translations('', 1, 1) == ''
+
+    def test_single_translator_returns_string(self):
+        """'fa#1' should return a single string translation."""
+        mock_open = MagicMock()
+        mock_open.return_value.__enter__ = MagicMock(
+            return_value=MagicMock(read=MagicMock(return_value='1|2|ترجمه\n1|3|بعدی\n'))
+        )
+        mock_open.return_value.__exit__ = MagicMock(return_value=False)
+        with patch('builtins.open', mock_open):
+            result = utils.get_translations('fa#1', 1, 1)
+        assert isinstance(result, str)
+
+    def test_all_translators_returns_dict(self):
+        """'fa' (no index) should return a dict keyed by translator name."""
+        mock_open = MagicMock()
+        mock_open.return_value.__enter__ = MagicMock(
+            return_value=MagicMock(read=MagicMock(return_value='2|2|ترجمه\n2|3|بعدی\n'))
+        )
+        mock_open.return_value.__exit__ = MagicMock(return_value=False)
+        with patch('builtins.open', mock_open):
+            result = utils.get_translations('fa', 2, 1)
+        assert isinstance(result, dict)
