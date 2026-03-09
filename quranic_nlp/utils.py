@@ -72,20 +72,21 @@ def get_translations(lang_input, soure, ayeh):
             return txt[start.end():end2.start()]
         return txt[start.end():].split('\n')[0]
     else:
-        translations = []
+        translations = {}
         for name_entry in constant.TRANSLATION[lang_input]:
             name = name_entry.split()[0]
             filepath = os.path.join(constant.TRANSLATE_QURAN, lang_input, name + '.txt')
             with open(filepath, encoding='utf-8') as f:
                 txt = f.read()
-            start = re.search(rf"{soure}\|{ayeh + 1}\|", txt)
-            end = re.search(rf"{soure}\|{ayeh + 2}\|", txt)
+            temp_ayeh = ayeh + 1 if soure == 1 else ayeh
+            start = re.search(rf"{soure}\|{temp_ayeh}\|", txt)
+            end = re.search(rf"{soure}\|{temp_ayeh + 1}\|", txt)
             if start is None:
-                translations.append('')
+                translations[name] = ''
             elif end is not None:
-                translations.append(txt[start.end():end.start()])
+                translations[name] = txt[start.end():end.start()]
             else:
-                translations.append(txt[start.end():].split('\n')[0])
+                translations[name] = txt[start.end():].split('\n')[0]
         return translations
 
 
