@@ -1,22 +1,16 @@
 """
 quranic_nlp.data_requirements
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Utility to download the required data files for quranic_nlp.
+Downloads the required data files for quranic_nlp from GitHub Releases.
 
 Usage::
 
     from quranic_nlp.data_requirements import download_data
     download_data()
 
-Or via CLI::
+Or via CLI after ``pip install quranic-nlp``::
 
     quranic_data
-
-Required environment variables (set in a ``.env`` file):
-
-- ``URL_DATA_NEED_QURANIC_PACKAGE``: URL of the data zip archive.
-- ``NAME_FILE_NEED_QURANIC_PACKAGE``: Local filename for the downloaded zip.
-- ``DIRECTORY_DATA_NEED_QURANIC_PACKAGE``: Subdirectory name inside the package to extract into.
 """
 
 from clint.textui import progress
@@ -25,63 +19,91 @@ import zipfile
 import os
 import json
 
-from dotenv import load_dotenv
-
-load_dotenv()
-
-
-def _get_env_var(name):
-    value = os.getenv(name)
-    if not value:
-        raise EnvironmentError(
-            f'Required environment variable {name!r} is not set. '
-            'Please create a .env file with the necessary variables. '
-            'See .env.example for reference.'
-        )
-    return value
+# GitHub Release asset URL — update this when releasing a new data version
+DATA_URL = (
+    'https://github.com/language-ml/hadith-quranic_nlp'
+    '/releases/download/v1.2.1/data.zip'
+)
+_DATA_DIR_NAME = 'data'
+_ZIP_NAME = 'quranic_data.zip'
 
 
-def download_data():
-    """Download and extract the required data files into the package data directory."""
-    data_url = _get_env_var('URL_DATA_NEED_QURANIC_PACKAGE')
-    name_file = _get_env_var('NAME_FILE_NEED_QURANIC_PACKAGE')
-    destination_folder_name = _get_env_var('DIRECTORY_DATA_NEED_QURANIC_PACKAGE')
-
-    package_dir = os.path.dirname(os.path.realpath(__file__))
-    data_directory = os.path.join(package_dir, destination_folder_name)
-    os.makedirs(data_directory, exist_ok=True)
-
-    _download_and_extract(data_url, name_file, data_directory)
-
-    config_path = os.path.join(package_dir, 'config', 'settings.json')
-    with open(config_path, 'r') as f:
-        config = json.load(f)
-    config['data_directory'] = data_directory
-    with open(config_path, 'w') as f:
-        json.dump(config, f)
-
-    print(f'Data successfully downloaded to: {data_directory}')
+def _package_dir():
+    return os.path.dirname(os.path.realpath(__file__))
 
 
-def _download_and_extract(data_url, name_file, destination_folder):
-    print('Downloading data...')
-    response = requests.get(data_url, stream=True)
+def _data_dir():
+    return os.path.join(_package_dir(), _DATA_DIR_NAME)
+
+
+def is_data_available():
+    """Return True if the data directory exists and is non-empty."""
+    d = _data_dir()
+    return os.path.isdir(d) and bool(os.listdir(d))
+
+
+def download_data(force=False):
+    """
+    Download and extract the required data files into the package data directory.
+
+    Parameters
+    ----------
+    force : bool
+        Re-download even if data already exists. Default ``False``.
+
+    Example
+    -------
+    ::
+
+        from quranic_nlp.data_requirements import download_data
+        download_data()
+    """
+    if not force and is_data_available():
+        print(f'Data already present at: {_data_dir()}')
+        print('Use download_data(force=True) to re-download.')
+        return
+
+    data_dir = _data_dir()
+    os.makedirs(data_dir, exist_ok=True)
+    zip_path = os.path.join(_package_dir(), _ZIP_NAME)
+
+    _download_and_extract(DATA_URL, zip_path, data_dir)
+    _update_config(data_dir)
+
+    print(f'Data successfully installed to: {data_dir}')
+
+
+def _download_and_extract(url, zip_path, destination):
+    print('Downloading data from GitHub Release...')
+    response = requests.get(url, stream=True)
     response.raise_for_status()
 
     total_length = int(response.headers.get('content-length', 0))
-    with open(name_file, 'wb') as f:
-        chunks = response.iter_content(chunk_size=1024)
-        for chunk in progress.bar(chunks, expected_size=(total_length // 1024) + 1):
+    with open(zip_path, 'wb') as f:
+        for chunk in progress.bar(
+            response.iter_content(chunk_size=1024),
+            expected_size=(total_length // 1024) + 1,
+        ):
             if chunk:
                 f.write(chunk)
 
     print('Download complete. Extracting...')
     try:
-        with zipfile.ZipFile(name_file, 'r') as zf:
-            zf.extractall(destination_folder)
+        with zipfile.ZipFile(zip_path, 'r') as zf:
+            zf.extractall(destination)
     finally:
-        os.remove(name_file)
+        if os.path.exists(zip_path):
+            os.remove(zip_path)
     print('Extraction complete.')
+
+
+def _update_config(data_dir):
+    config_path = os.path.join(_package_dir(), 'config', 'settings.json')
+    with open(config_path, 'r') as f:
+        config = json.load(f)
+    config['data_directory'] = data_dir
+    with open(config_path, 'w') as f:
+        json.dump(config, f)
 
 
 def main():

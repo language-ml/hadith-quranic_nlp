@@ -3,5 +3,4 @@ pandas
 numpy
 openpyxl
 requests
-python-dotenv
 clint

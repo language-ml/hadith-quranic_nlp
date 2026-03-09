@@ -28,7 +28,7 @@ from setuptools import setup
 
 CLASSIFIERS = [ 'Development Status :: 5 - Production/Stable', 'Environment :: Console', 'Intended Audience :: Developers', 'Intended Audience :: Education', 'Intended Audience :: Information Technology', 'Intended Audience :: Science/Research', 'License :: OSI Approved :: MIT License', 'Natural Language :: Arabic', 'Operating System :: OS Independent', 'Programming Language :: Python :: 3', 'Programming Language :: Python :: 3 :: Only', 'Programming Language :: Python :: 3.7', 'Programming Language :: Python :: 3.8', 'Programming Language :: Python :: 3.9', 'Programming Language :: Python :: 3.10', 'Topic :: Scientific/Engineering', 'Topic :: Scientific/Engineering :: Artificial Intelligence', 'Topic :: Scientific/Engineering :: Information Analysis', 'Topic :: Text Processing' ]
 
-INSTALL_REQUIRES = ['spacy', 'pandas', 'numpy', 'openpyxl', 'requests', 'clint','python-dotenv'],
+INSTALL_REQUIRES = ['spacy', 'pandas', 'numpy', 'openpyxl', 'requests', 'clint']
 
 DESCRIPTION = ("quarnic nlp")
 

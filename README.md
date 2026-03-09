@@ -44,46 +44,41 @@ Contents:
 
 ## Installation
 
-To get started using Quranic NLP in your python project, you may simply install it via the pip package.
-
-### Install with pip
+### Step 1 — Install the package
 
 ```bash
 pip install quranic-nlp
 ```
 
-You can check the `requirements.txt` file to see the required packages.
+### Step 2 — Download the data
 
-## Virtual Environment
-
-It is recommended to use a virtual environment:
+The library requires data files (~97MB) that are downloaded separately from GitHub Releases:
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate   # On Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-pip install -e .
+quranic_data
 ```
 
-## Data Setup
+Or from Python:
 
-The library requires data files that must be downloaded separately.
+```python
+from quranic_nlp.data_requirements import download_data
+download_data()
+```
 
-1. Copy `.env.example` to `.env` and fill in the required values:
-   ```bash
-   cp .env.example .env
-   ```
-2. Edit `.env` with the correct data URL (contact the maintainer for access).
-3. Download the data:
-   ```bash
-   quranic_data
-   ```
-   Or from Python:
-   ```python
-   from quranic_nlp.data_requirements import download_data
-   download_data()
-   ```
-   Data will be stored in `quranic_nlp/data/` by default.
+Data is downloaded once and stored inside the package directory automatically.
+
+## Development Setup
+
+To set up a local development environment:
+
+```bash
+git clone https://github.com/language-ml/hadith-quranic_nlp.git
+cd hadith-quranic_nlp
+python -m venv .venv
+source .venv/bin/activate   # On Windows: .venv\Scripts\activate
+pip install -e .
+quranic_data
+```
 
 ## Pipeline
 
