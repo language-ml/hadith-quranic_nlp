@@ -90,7 +90,7 @@ The NLP pipeline contains morphological information e.g., Lemmatizer as well as 
 from quranic_nlp import language
 
 translation_translator = 'fa#1'
-pips = 'dep,pos,root,lemma'
+pips = 'dep,pos,root,lem'
 nlp = language.Pipeline(pips, translation_translator)
 ```
 
@@ -123,7 +123,7 @@ Note The last two calls require access to the internet for an API call.
 from quranic_nlp import language
 
 translation_translator = 'fa#1'
-pips = 'dep,pos,root,lemma'
+pips = 'dep,pos,root,lem'
 nlp = language.Pipeline(pips, translation_translator)
 
 doc = nlp('1#1')
@@ -193,6 +193,19 @@ print(first_doc._.translations)
 ```
 ```python
 ستايش خدا را كه پروردگار جهانيان است.
+```
+
+To get **all** translators for a language at once, omit the `#index` — translations are returned as a `dict` keyed by translator name:
+```python
+nlp_fa_all = language.Pipeline(pips, 'fa')
+doc = nlp_fa_all('1#2')
+print(doc._.translations)
+```
+```python
+{'ansarian': 'همه ستایش ها، ویژه خدا، مالک و مربّی جهانیان است.',
+ 'ayati': 'ستايش خدا را كه پروردگار جهانيان است.',
+ 'bahrampour': 'ستايش خداى را كه پروردگار جهانيان است',
+ ...}
 ```
 ```python
 print(first_doc._.sim_ayahs)
@@ -283,8 +296,8 @@ print(word.lemma_)
 ```
 ```python
 print(word.pos_)
-from quranic_nlp import utils
-print(utils.POS_UNI_FA[word.pos_])
+from quranic_nlp import constant
+print(constant.POS_UNI_FA[word.pos_])
 ```
 ```python
 NOUN
@@ -332,8 +345,8 @@ print(word.lemma_)
 ```
 ```python
 print(word.pos_)
-from quranic_nlp import utils
-print(utils.POS_UNI_FA[word.pos_])
+from quranic_nlp import constant
+print(constant.POS_UNI_FA[word.pos_])
 ```
 ```python
 VERB
@@ -355,6 +368,21 @@ print(word._.root)
 ```
 
 
+
+### Multiple Matches
+
+When a free-text query matches multiple verses, use `search_all` to get all of them:
+
+```python
+docs = language.search_all(nlp, 'رب العالمین', max_results=5)
+for doc in docs:
+    print(doc._.surah, doc._.ayah, doc._.text)
+```
+```python
+فاتحه 2 الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ
+مائده 28 لَئِن بَسَطتَ إِلَيَّ يَدَكَ...
+انعام 45 فَقُطِعَ دَابِرُ الْقَوْمِ...
+```
 
 At the end, to jsonify the results you can use the following:
 
@@ -407,18 +435,3 @@ To contribute, fork the repository, make your changes, and open a pull request. 
 
 We believe open collaboration leads to better tools for everyone. Every contribution, big or small, is valued and appreciated.
 
-## Bibles
-```python
-import pickle
-
-with open("./data_utils/bibles.pickle", "rb") as handle:
-    bibles_dict = pickle.load(handle)
-print(len(bibles_dict))
-print(list(bibles_dict.keys())[0:10])
-print(bibles_dict['01001009'])
-```
-```python
-38555
-['01001001', '01001002', '01001003', '01001004', '01001005', '01001006', '01001007', '01001008', '01001009', '01001010']
-{'arb-x-bible-1993': 'وقال الله لتجتمع المياه تحت السماء الى مكان واحد ولتظهر اليابسة . وكان كذلك .', 'eng-x-bible-amplified': 'Then God said : “ Let the waters under the heavens be collected together into one place , and let the dry land appear . ” And it was so .', 'grc-x-bible-accented': 'και ειπεν ο θεος συναχθητω το υδωρ το υποκατω του ουρανου εις συναγωγην μιαν και οφθητω η ξηρα και εγενετο ουτως και συνηχθη το υδωρ το υποκατω του ουρανου εις τας συναγωγας αυτων και ωφθη η ξηρα'}
-```
