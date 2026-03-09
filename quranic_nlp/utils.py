@@ -297,7 +297,7 @@ def get_words_and_spaces(soure, ayeh):
             lambda x: x.split('Seq')[1].split('"')[1] if isinstance(x, str) else None
         ).values
     ):
-        if xml_val is not None and int(xml_val) == 2:
+        if isinstance(xml_val, str) and int(xml_val) == 2:
             spaces[idx - 1] = False
     return words, spaces
 
