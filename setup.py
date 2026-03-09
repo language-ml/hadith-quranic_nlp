@@ -67,6 +67,7 @@ setup(
     license='MIT',
     description=DESCRIPTION,
     long_description=LONG_DESCRIPTION,
+    long_description_content_type='text/markdown',
     classifiers=CLASSIFIERS,
     install_requires=INSTALL_REQUIRES,
     python_requires='>=3.7.0, <3.11'
