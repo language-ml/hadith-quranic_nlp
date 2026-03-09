@@ -165,14 +165,31 @@ def search_in_quran(text):
     """
     if '#' not in text:
         resp = requests.post(
-            'https://hadith.ai/quranic_extraction/',
-            json={'query': text, 'min_tok': 3, 'min_char': 3},
-            timeout=10,
+            'https://quranic-api.qcri.org/qextract_ayah',
+            headers={'accept': 'application/json', 'Content-Type': 'application/json'},
+            json={
+                'query': text,
+                'target_verses': '',
+                'min_token_num': 2,
+                'min_char_len_prop': 50,
+                'consecutive_verses_priority': False,
+                'custom_bert_token_threshold': 0,
+                'use_lm': True,
+                'inexact_match': True,
+                'use_rule_based': True,
+                'detailed_output': True,
+            },
+            timeout=30,
         )
-        if resp.ok and resp.json()['output']['quran_id']:
-            ref = resp.json()['output']['quran_id'][0][0]
-            soure, ayeh = ref.split('##')
-            return int(soure), int(ayeh)
+        if resp.ok:
+            output = resp.json().get('output', {})
+            quran_ids = (
+                output.get('regex_qe', {}).get('quran_id') or
+                output.get('inexact_match', {}).get('quran_id')
+            )
+            if quran_ids and quran_ids[0]:
+                soure, ayeh = quran_ids[0][0].split('##')
+                return int(soure), int(ayeh)
         raise ValueError(f'Verse not found for query: {text!r}')
 
     if not bool(re.search('[ا-ی]', text)):
