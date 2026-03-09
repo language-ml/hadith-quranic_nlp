@@ -6,7 +6,7 @@
 <h2 align="center">QuranicTools: A Python NLP Library for Quranic NLP</h2>
 
 <div align="center">
-  <a href="https://pypi.org/project/quranic-nlp/"><img src="https://shields.io/pypi/v/quranic-nlp.svg"></a>
+  <a href="https://pypi.org/project/quranic-nlp/"><img src="https://img.shields.io/pypi/v/quranic-nlp?cache=0"></a>
   <a href=""><img src="https://img.shields.io/badge/license-Apache%202-blue.svg"></a>
   <a href="https://colab.research.google.com/github/language-ml/hadith-quranic_nlp/blob/main/notebooks/quranic_nlp_demo.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>
 </div>
