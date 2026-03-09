@@ -146,6 +146,62 @@ def get_hadiths(soure, ayeh, filter_number=10):
         return None
 
 
+def _qcri_search(text):
+    """Call the QCRI verse extraction API and return a list of (soure, ayeh) tuples."""
+    resp = requests.post(
+        'https://quranic-api.qcri.org/qextract_ayah',
+        headers={'accept': 'application/json', 'Content-Type': 'application/json'},
+        json={
+            'query': text,
+            'target_verses': '',
+            'min_token_num': 2,
+            'min_char_len_prop': 50,
+            'consecutive_verses_priority': False,
+            'custom_bert_token_threshold': 0,
+            'use_lm': True,
+            'inexact_match': True,
+            'use_rule_based': True,
+            'detailed_output': True,
+        },
+        timeout=30,
+    )
+    if not resp.ok:
+        return []
+    output = resp.json().get('output', {})
+    quran_ids = (
+        output.get('regex_qe', {}).get('quran_id') or
+        output.get('inexact_match', {}).get('quran_id')
+    )
+    if not quran_ids or not quran_ids[0]:
+        return []
+    return [(int(s), int(a)) for ref in quran_ids[0] for s, a in [ref.split('##')]]
+
+
+def search_all_in_quran(text):
+    """
+    Search for all matching verses for the given free Arabic text.
+
+    Parameters
+    ----------
+    text : str
+        Free Arabic text to search for.
+
+    Returns
+    -------
+    list[tuple[int, int]]
+        List of ``(surah_index, ayah_index)`` tuples for all matching verses.
+
+    Raises
+    ------
+    ValueError
+        If no matches are found.
+    """
+    matches = _qcri_search(text)
+    if not matches:
+        raise ValueError(f'No verses found for query: {text!r}')
+    return matches
+
+
 def search_in_quran(text):
     """
     Resolve a verse reference to (surah_index, ayah_index).
@@ -164,33 +220,10 @@ def search_in_quran(text):
         ``(surah_index, ayah_index)``
     """
     if '#' not in text:
-        resp = requests.post(
-            'https://quranic-api.qcri.org/qextract_ayah',
-            headers={'accept': 'application/json', 'Content-Type': 'application/json'},
-            json={
-                'query': text,
-                'target_verses': '',
-                'min_token_num': 2,
-                'min_char_len_prop': 50,
-                'consecutive_verses_priority': False,
-                'custom_bert_token_threshold': 0,
-                'use_lm': True,
-                'inexact_match': True,
-                'use_rule_based': True,
-                'detailed_output': True,
-            },
-            timeout=30,
-        )
-        if resp.ok:
-            output = resp.json().get('output', {})
-            quran_ids = (
-                output.get('regex_qe', {}).get('quran_id') or
-                output.get('inexact_match', {}).get('quran_id')
-            )
-            if quran_ids and quran_ids[0]:
-                soure, ayeh = quran_ids[0][0].split('##')
-                return int(soure), int(ayeh)
-        raise ValueError(f'Verse not found for query: {text!r}')
+        matches = _qcri_search(text)
+        if not matches:
+            raise ValueError(f'Verse not found for query: {text!r}')
+        return matches[0]
 
     if not bool(re.search('[ا-ی]', text)):
         soure, ayeh = text.split('#')

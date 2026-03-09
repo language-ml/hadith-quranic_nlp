@@ -200,6 +200,44 @@ def load_pipeline(pipelines: str, translation_lang: str = None):
     return NLP(pipelines, translation_lang).nlp
 
 
+def search_all(nlp, text: str, max_results: int = None) -> list:
+    """
+    Return a list of processed docs for all verses matching the given text.
+
+    Unlike calling ``nlp(text)`` directly (which returns only the first match),
+    this function processes every matching verse and returns them all.
+
+    Parameters
+    ----------
+    nlp : spacy.Language
+        A pipeline created with ``Pipeline(...)`` or ``load_pipeline(...)``.
+    text : str
+        Free Arabic text to search for.
+    max_results : int, optional
+        Maximum number of docs to return. Returns all matches if not set.
+
+    Returns
+    -------
+    list[Doc]
+        A list of processed spaCy ``Doc`` objects, one per matching verse.
+
+    Example
+    -------
+    ::
+
+        from quranic_nlp import language
+
+        nlp = language.Pipeline('dep,pos,root,lem', 'fa#1')
+        docs = language.search_all(nlp, 'رب العالمین')
+        for doc in docs:
+            print(doc._.surah, doc._.ayah, doc._.translations)
+    """
+    matches = utils.search_all_in_quran(text)
+    if max_results is not None:
+        matches = matches[:max_results]
+    return [nlp(f'{soure}#{ayeh}') for soure, ayeh in matches]
+
+
 def to_json(pipelines: str, doc) -> list:
     """
     Serialize a processed ``Doc`` to a list of per-token dictionaries.
