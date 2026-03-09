@@ -294,7 +294,7 @@ def get_words_and_spaces(soure, ayeh):
     spaces = np.ones(len(words), dtype=bool)
     for idx, xml_val in enumerate(
         nodes['xml'].apply(
-            lambda x: x.split('Seq')[1].split('"')[1] if x is not None else None
+            lambda x: x.split('Seq')[1].split('"')[1] if isinstance(x, str) else None
         ).values
     ):
         if xml_val is not None and int(xml_val) == 2:
