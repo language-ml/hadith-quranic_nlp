@@ -1,16 +1,8 @@
-import json
 import os
 
 
 def get_data_file_path(filename):
-    config_path = os.path.join(os.path.dirname(__file__), 'config', 'settings.json')
-    with open(config_path, 'r') as f:
-        config = json.load(f)
-
-    data_directory = config.get('data_directory', '')
-    if not data_directory:
-        data_directory = os.path.join(os.path.dirname(__file__), 'data')
-
+    data_directory = os.path.join(os.path.dirname(__file__), 'data')
     return os.path.join(data_directory, filename)
 
 

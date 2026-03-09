@@ -68,7 +68,6 @@ def download_data(force=False):
     zip_path = os.path.join(_package_dir(), _ZIP_NAME)
 
     _download_and_extract(DATA_URL, zip_path, data_dir)
-    _update_config(data_dir)
 
     print(f'Data successfully installed to: {data_dir}')
 

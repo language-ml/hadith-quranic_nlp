@@ -69,5 +69,8 @@ dmypy.json
 quranic_nlp/data/
 resources/
 
+# Local settings (written by download_data; must not ship with package)
+quranic_nlp/config/settings.json
+
 # macOS
 .DS_Store
