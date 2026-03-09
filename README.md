@@ -8,6 +8,7 @@
 <div align="center">
   <a href="https://pypi.org/project/quranic-nlp/"><img src="https://shields.io/pypi/v/quranic-nlp.svg"></a>
   <a href=""><img src="https://img.shields.io/badge/license-Apache%202-blue.svg"></a>
+  <a href="https://colab.research.google.com/github/language-ml/hadith-quranic_nlp/blob/main/notebooks/quranic_nlp_demo.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>
 </div>
 
 <div align="center">
