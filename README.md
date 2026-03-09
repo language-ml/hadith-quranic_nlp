@@ -5,13 +5,6 @@
 
 <h2 align="center">QuranicTools: A Python NLP Library for Quranic NLP</h2>
 
-<h3 align="center">
-  Contributors: Seyyed Mohammad Aref Jahanmir, Alireza Sahebi, Doratossadat Dastgheyb,<br>
-  Erfan Mohammadi, Mahdi Ahmadi, Ehsaneddin Asgari<br>
-  <br>
-  Contact: asgari [dot] berkeley [dot] edu
-</h3>
-
 <div align="center">
   <a href="https://pypi.org/project/quranic-nlp/"><img src="https://shields.io/pypi/v/quranic-nlp.svg"></a>
   <a href=""><img src="https://img.shields.io/badge/license-Apache%202-blue.svg"></a>
@@ -47,6 +40,7 @@ Contents:
 - [Pipeline (dep,pos,lem,root)](#pipeline)
 - [Format Inputs](#format-inputs)
 - [Example](#example)
+- [Contributors](#contributors)
 - [Contributing](#contributing)
 
 ## Installation
@@ -384,22 +378,33 @@ displacy.serve(doc, style="dep", options=options)
 ![](./docs/image_readme/fig.png "")
 ![](./docs/image_readme/fig2.png "")
 
+## Contributors
+
+- Seyyed Mohammad Aref Jahanmir
+- Alireza Sahebi
+- Doratossadat Dastgheyb
+- Erfan Mohammadi
+- Mahdi Ahmadi
+- Ehsaneddin Asgari
+
+📧 Contact: asgari [dot] berkeley [dot] edu
+
 ## Contributing
 
 We warmly welcome contributions from the community! Whether you are a researcher, developer, linguist, or simply passionate about the Quran and NLP, there are many ways to get involved:
 
-- **Add new features** — new pipeline components, additional morphological analyses, or support for more languages
-- **Improve data quality** — corrections to POS tags, dependency parses, lemmas, or roots
-- **Expand translations** — add or improve Quranic translations for underrepresented languages
-- **Write tests** — help increase test coverage
-- **Report bugs** — open an issue if something doesn't work as expected
-- **Improve documentation** — clearer examples, tutorials, or API docs are always appreciated
+| Area | How to Help |
+|------|-------------|
+| New features | New pipeline components, morphological analyses, or language support |
+| Data quality | Corrections to POS tags, dependency parses, lemmas, or roots |
+| Translations | Add or improve Quranic translations for underrepresented languages |
+| Testing | Help increase test coverage |
+| Bug reports | Open an issue if something doesn't work as expected |
+| Documentation | Clearer examples, tutorials, or API docs |
 
 To contribute, fork the repository, make your changes, and open a pull request. For larger changes, please open an issue first to discuss your idea.
 
 We believe open collaboration leads to better tools for everyone. Every contribution, big or small, is valued and appreciated.
-
-📧 Contact: asgari [dot] berkeley [dot] edu
 
 ## Bibles
 ```python
