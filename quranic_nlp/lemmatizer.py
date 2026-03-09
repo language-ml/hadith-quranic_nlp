@@ -12,7 +12,7 @@ def lemma(model, soure, ayeh):
     """Return per-token lemma dicts for the given verse."""
     if soure is None:
         return None
-    data = model[(model['soure'] == soure - 1) & (model['ayeh'] == ayeh - 1)]
+    data = model[(model['soure'] == soure) & (model['ayeh'] == ayeh)]
     output = []
     for lem_value in data['Lemma']:
         try:

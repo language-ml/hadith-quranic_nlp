@@ -164,9 +164,37 @@ class NLP:
             self.nlp.add_pipe('root')
 
 
+class QuranicNLP:
+    """
+    Wrapper around a spaCy Language that returns a list of docs for free-text
+    queries and a single doc for ``'surah#ayah'`` references.
+
+    Use ``Pipeline(...)`` or ``load_pipeline(...)`` to get an instance.
+    """
+
+    def __init__(self, nlp):
+        self._nlp = nlp
+
+    def __call__(self, text: str):
+        """
+        Process *text* and return:
+
+        - A single ``Doc`` when *text* is a ``'surah#ayah'`` reference
+          (e.g. ``'1#1'`` or ``'حمد#1'``).
+        - A ``list[Doc]`` when *text* is free Arabic (no ``#``), returning
+          all matching verses.
+        """
+        if '#' not in text:
+            return search_all(self, text)
+        return self._nlp(text)
+
+    def __getattr__(self, name):
+        return getattr(self._nlp, name)
+
+
 class Pipeline:
     """
-    Convenience factory that returns a configured spaCy ``Language`` object.
+    Convenience factory that returns a configured ``QuranicNLP`` pipeline.
 
     Parameters
     ----------
@@ -177,7 +205,7 @@ class Pipeline:
 
     Returns
     -------
-    spacy.Language
+    QuranicNLP
 
     Example
     -------
@@ -186,18 +214,24 @@ class Pipeline:
         from quranic_nlp import language
 
         nlp = language.Pipeline('dep,pos,root,lem', 'fa#1')
+
+        # Single doc (surah#ayah reference)
         doc = nlp('1#1')
         print(doc._.surah)
-        print(doc._.translations)
+
+        # List of docs (free text — all matching verses)
+        docs = nlp('رب العالمین')
+        for doc in docs:
+            print(doc._.surah, doc._.ayah)
     """
 
     def __new__(cls, pipeline: str, translation_lang: str = None):
-        return NLP(pipeline, translation_lang).nlp
+        return QuranicNLP(NLP(pipeline, translation_lang).nlp)
 
 
 def load_pipeline(pipelines: str, translation_lang: str = None):
     """Load and return a pipeline (alias for ``Pipeline``)."""
-    return NLP(pipelines, translation_lang).nlp
+    return QuranicNLP(NLP(pipelines, translation_lang).nlp)
 
 
 def search_all(nlp, text: str, max_results: int = None) -> list:
@@ -258,9 +292,9 @@ def to_json(pipelines: str, doc) -> list:
     """
     result = []
     for i, token in enumerate(doc):
-        entry = {'id': i + 1, 'text': token}
+        entry = {'id': i + 1, 'text': str(token)}
         if 'root' in pipelines:
-            entry['root'] = token._.root
+            entry['root'] = token._.root or ''
         if 'lem' in pipelines:
             entry['lemma'] = token.lemma_
         if 'pos' in pipelines:
@@ -268,6 +302,6 @@ def to_json(pipelines: str, doc) -> list:
         if 'dep' in pipelines:
             entry['rel'] = token.dep_
             entry['arc'] = token._.dep_arc
-            entry['head'] = token.head
+            entry['head'] = str(token.head)
         result.append(entry)
     return result
