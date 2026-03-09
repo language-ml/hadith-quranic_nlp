@@ -3,8 +3,14 @@
    Dadmatools
 </h1> -->
 
-<h2 align="center">QuaranicTools: A Python NLP Library for Quranic NLP</h2>
-<h3 align="center"><a href='language.ml'>Language Processing and Digital Humanities Lab (Language.ML)</a></h2>
+<h2 align="center">QuranicTools: A Python NLP Library for Quranic NLP</h2>
+
+<h3 align="center">
+  Contributors: Seyyed Mohammad Aref Jahanmir, Alireza Sahebi, Doratossadat Dastgheyb,<br>
+  Erfan Mohammadi, Mahdi Ahmadi, Ehsaneddin Asgari<br>
+  <br>
+  Contact: asgari [dot] berkeley [dot] edu
+</h3>
 
 <div align="center">
   <a href="https://pypi.org/project/quranic-nlp/"><img src="https://shields.io/pypi/v/quranic-nlp.svg"></a>
@@ -38,9 +44,10 @@ Quranic NLP is a computational toolbox to conduct various syntactic and semantic
 Contents:
 
 - [Installation](#installation)
-- [Pipline (dep,pos,lem,root)](#pipeline)
-- [Format inputs](#format-inputs)
+- [Pipeline (dep,pos,lem,root)](#pipeline)
+- [Format Inputs](#format-inputs)
 - [Example](#example)
+- [Contributing](#contributing)
 
 ## Installation
 
@@ -376,6 +383,23 @@ displacy.serve(doc, style="dep", options=options)
 ```
 ![](./docs/image_readme/fig.png "")
 ![](./docs/image_readme/fig2.png "")
+
+## Contributing
+
+We warmly welcome contributions from the community! Whether you are a researcher, developer, linguist, or simply passionate about the Quran and NLP, there are many ways to get involved:
+
+- **Add new features** — new pipeline components, additional morphological analyses, or support for more languages
+- **Improve data quality** — corrections to POS tags, dependency parses, lemmas, or roots
+- **Expand translations** — add or improve Quranic translations for underrepresented languages
+- **Write tests** — help increase test coverage
+- **Report bugs** — open an issue if something doesn't work as expected
+- **Improve documentation** — clearer examples, tutorials, or API docs are always appreciated
+
+To contribute, fork the repository, make your changes, and open a pull request. For larger changes, please open an issue first to discuss your idea.
+
+We believe open collaboration leads to better tools for everyone. Every contribution, big or small, is valued and appreciated.
+
+📧 Contact: asgari [dot] berkeley [dot] edu
 
 ## Bibles
 ```python
