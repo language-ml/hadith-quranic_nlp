@@ -62,7 +62,7 @@ def _quran_order_df():
 
 @functools.lru_cache(maxsize=1)
 def _sim_ayahs_index():
-    """Build and cache the full similarity lookup: {(soure, ayeh): [ref, ...]}."""
+    """Build and cache the full similarity lookup: {(soure, ayeh): [(ref, score), ...]}."""
     index = {}
     with open(constant.SIMILARITY_AYAT, encoding='utf-8') as f:
         for line in f:
@@ -71,8 +71,8 @@ def _sim_ayahs_index():
             ay = int(parts[0][-3:])
             refs = []
             for part in parts[1:]:
-                ref, _ = part.split(':')
-                refs.append(f"{int(ref[:-3])}#{int(ref[-3:])}")
+                ref, score = part.split(':')
+                refs.append((f"{int(ref[:-3])}#{int(ref[-3:])}", float(score)))
             index[(so, ay)] = refs
     return index
 
@@ -89,7 +89,10 @@ def _translation_file(filepath):
 # ---------------------------------------------------------------------------
 
 def get_sim_ayahs(soure, ayeh):
-    """Return list of similar verse references (as 'surah#ayah' strings) for the given verse."""
+    """Return list of (ref, score) tuples for similar verses, sorted by descending score.
+
+    Each ``ref`` is a ``'surah#ayah'`` string and ``score`` is a float similarity value.
+    """
     return _sim_ayahs_index().get((soure, ayeh), [])
 
 
