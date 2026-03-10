@@ -50,6 +50,7 @@ Contents:
 - [JSON Output](#json-output)
 - [Surah-Level Graph Analysis](#surah-level-graph-analysis)
 - [Token Pattern Queries](#token-pattern-queries)
+- [Cross-Verse Corpus Search](#cross-verse-corpus-search)
 - [Hadiths](#hadiths)
 - [Visualization](#visualization)
 - [Contributors](#contributors)
@@ -420,6 +421,124 @@ for row in rows:
     left  = ' '.join(t.text for t in row['left'])
     right = ' '.join(t.text for t in row['right'])
     print(f"{row['surah']}:{row['ayah']}  {left} [{row['match'].text}] {right}")
+```
+
+## Cross-Verse Corpus Search
+
+`quranic_nlp.corpus` provides a high-speed cross-verse pattern matcher that treats the **entire Quran as one flat sequence** of ~128 K tokens. Patterns can freely span verse and surah boundaries. Lookup is O(log N) per step via pre-built inverted numpy indexes.
+
+> **TAG notation** uses the Quranic Treebank scheme:
+> `N` noun · `V` verb · `P` preposition · `PN` proper noun · `PRON` pronoun ·
+> `CONJ` conjunction · `DET` determiner · `ADJ` adjective · `NEG` negation …
+
+### Build / load the index
+
+```python
+from quranic_nlp.corpus import CorpusIndex
+
+# First time (~1–2 s): build from morphologhy.csv and save to disk
+idx = CorpusIndex.build(save=True)
+
+# Subsequent calls: load from cache in ~0.04 s
+idx = CorpusIndex.load()
+print(idx)
+# → CorpusIndex(N=128,219)
+```
+
+### Single-condition search
+
+```python
+# All occurrences of root رحم in the Quran
+matches = idx.find_root('رحم', max_results=5)
+for m in matches:
+    print(m)
+# → CorpusMatch(key='ROOT:رحم', refs=[1:1], text='رَّحْمَٰنِ')
+# → CorpusMatch(key='ROOT:رحم', refs=[1:1], text='رَّحِيمِ')
+# → CorpusMatch(key='ROOT:رحم', refs=[1:3], text='رَّحْمَٰنِ')
+# → CorpusMatch(key='ROOT:رحم', refs=[1:3], text='رَّحِيمِ')
+# → CorpusMatch(key='ROOT:رحم', refs=[2:37], text='رَّحِيمُ')
+
+# Noun occurrences only
+matches = idx.find_root('رحم', tag='N', max_results=3)
+
+# By lemma
+matches = idx.find_lemma('ٱللَّه', max_results=5)
+```
+
+### Proximity search with SKIP (cross-verse)
+
+```python
+# Root رحم anywhere within 5 tokens of root علم — crosses verse boundaries
+matches = idx.find_root_near_root('رحم', 'علم', max_dist=5, max_results=5)
+for m in matches:
+    print(m)
+    for t in m.tokens:
+        print(f'  {t.soure}:{t.ayeh} tok={t.tok_i}  {t.text!r:20}  root={t.root!r}  tag={t.tag}')
+# → CorpusMatch(key='ROOT:رحم+ROOT:علم', refs=[5:39, 5:40], text='رَّحِيمٌ تَعْلَمْ')
+#     5:39 tok=18  'رَّحِيمٌ'          root='رحم'  tag=ADJ
+#     5:40 tok=2   'تَعْلَمْ'          root='علم'  tag=V
+# → CorpusMatch(key='ROOT:رحم+ROOT:علم', refs=[55:1, 55:2], text='رَّحْمَٰنُ عَلَّمَ')
+#     55:1 tok=0   'رَّحْمَٰنُ'        root='رحم'  tag=N
+#     55:2 tok=0   'عَلَّمَ'           root='علم'  tag=V
+```
+
+**Surah 55 (Al-Rahman): الرَّحْمَٰنُ عَلَّمَ** — a perfect cross-verse match found automatically!
+
+### Complex multi-element patterns
+
+```python
+# Noun صبر followed within 3 tokens by a verb (cross-verse OK)
+matches = idx.search([
+    {'TAG': 'N', 'ROOT': 'صبر'},
+    {'TAG': 'V', 'SKIP': 3},
+], max_results=5)
+for m in matches:
+    print(m)
+# → CorpusMatch(key='match', refs=[2:153, 2:154], text='صَّٰبِرِينَ تَقُولُ')
+# → CorpusMatch(key='match', refs=[2:155, 2:156], text='صَّٰبِرِينَ أَصَٰبَتْ')
+# → CorpusMatch(key='match', refs=[2:249, 2:250], text='صَّٰبِرِينَ بَرَزُ')
+# → CorpusMatch(key='match', refs=[2:250],         text='صَبْرًا ثَبِّتْ')
+# → CorpusMatch(key='match', refs=[3:142, 3:143],  text='صَّٰبِرِينَ كُن')
+
+# Optional DET between root علم and a noun (OP='?')
+matches = idx.search([
+    {'ROOT': 'علم'},
+    {'TAG': 'DET', 'OP': '?'},
+    {'TAG': 'N'},
+], max_results=5)
+for m in matches:
+    print(m)
+# → CorpusMatch(key='match', refs=[2:33],        text='أَعْلَمُ غَيْبَ')
+# → CorpusMatch(key='match', refs=[2:60],        text='عَلِمَ كُلُّ')
+# → CorpusMatch(key='match', refs=[2:127, 2:128],text='عَلِيمُ رَبَّ')
+# → CorpusMatch(key='match', refs=[2:220],       text='يَعْلَمُ ٱلْ مُفْسِدَ')
+
+# Any-of roots (IN syntax)
+matches = idx.search([{'ROOT': {'IN': ['رحم', 'علم', 'صبر']}}], max_results=5)
+
+# Cross-verse: رحم ending one verse, علم starting the next (SKIP=1)
+matches = idx.search([
+    {'ROOT': 'رحم'},
+    {'ROOT': 'علم', 'SKIP': 1},
+])
+for m in matches:
+    if len(m.refs) > 1:
+        print(m)   # crosses a verse boundary
+# → CorpusMatch(key='match', refs=[55:1, 55:2], text='رَّحْمَٰنُ عَلَّمَ')
+```
+
+### Inspecting matches
+
+```python
+m = matches[0]
+print(m.refs)    # → [(55, 1), (55, 2)]
+print(m.text)    # → 'رَّحْمَٰنُ عَلَّمَ'
+print(m.start, m.end)   # flat corpus positions
+
+for t in m.tokens:
+    print(t.soure, t.ayeh, t.tok_i, t.text, t.simple, t.lemma, t.root, t.tag)
+# → 55 1 0 رَّحْمَٰنُ  الرحمان  رَّحْمَٰن  رحم  N
+# → 55 2 0 عَلَّمَ    علم      عَلَّم     علم  V
 ```
 
 ## Hadiths
