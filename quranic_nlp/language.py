@@ -34,6 +34,8 @@ _register_extensions()
 # Module-level vocab shared across pipeline components
 _vocab = spacy.blank('ar').vocab
 _translation_lang = None
+_fetch_hadiths = False
+_verbose = False
 _depparser_model = None
 _postagger_model = None
 _lemma_model = None
@@ -44,7 +46,8 @@ _root_model = None
 def _init_quran(doc):
     text = doc.text
     soure, ayeh = utils.search_in_quran(text)
-    print(f'surah: {soure}, ayah: {ayeh}')
+    if _verbose:
+        print(f'surah: {soure}, ayah: {ayeh}')
 
     words, spaces = utils.get_words_and_spaces(soure, ayeh)
     sent = Doc(_vocab, words=words, spaces=spaces)
@@ -57,7 +60,7 @@ def _init_quran(doc):
     sent._.text = utils.get_text(soure, ayeh)
     sent._.translations = utils.get_translations(_translation_lang, soure, ayeh)
     sent._.sim_ayahs = utils.get_sim_ayahs(soure, ayeh)
-    sent._.hadiths = utils.get_hadiths(soure, ayeh)
+    sent._.hadiths = utils.get_hadiths(soure, ayeh) if _fetch_hadiths else None
     return sent
 
 
@@ -133,15 +136,24 @@ class NLP:
     translation_lang : str, optional
         Translation language/index string, e.g. ``'fa#1'`` or ``'en#3'``.
         Run ``utils.print_all_translations()`` to see all options.
+    hadiths : bool, optional
+        Fetch related hadiths for each verse from the API. Default ``False``
+        (skip fetching — use ``True`` only for single-verse lookups since it
+        makes a network request per verse).
+    verbose : bool, optional
+        Print surah/ayah info for each processed verse. Default ``False``.
     """
 
-    def __init__(self, pipelines: str, translation_lang: str = None):
-        global _vocab, _translation_lang
+    def __init__(self, pipelines: str, translation_lang: str = None,
+                 hadiths: bool = False, verbose: bool = False):
+        global _vocab, _translation_lang, _fetch_hadiths, _verbose
         global _depparser_model, _postagger_model, _lemma_model, _root_model
 
         nlp = spacy.blank('ar')
         _vocab = nlp.vocab
         _translation_lang = translation_lang
+        _fetch_hadiths = hadiths
+        _verbose = verbose
         self.nlp = nlp
         self.pipelines = pipelines
 
@@ -283,17 +295,23 @@ class SurahDoc:
         return f"SurahDoc(surah={self.surah!r}, n_ayahs={len(self.docs)})"
 
 
+def _local_surah_index(text: str):
+    """Return 1-based surah index for *text* using local data only, or None."""
+    # Try exact match, then with 'ال' prefix (e.g. 'فاتحه' → 'الفاتحه')
+    candidates = {text}
+    if not text.startswith('ال'):
+        candidates.add('ال' + text)
+    for idx, names in enumerate(constant.AYEH_INDEX):
+        if candidates & set(names):
+            return idx + 1
+    return None
+
+
 def _is_surah_input(text: str) -> bool:
     """Return True if *text* looks like a surah name/index (not free-text search)."""
-    # Pure integer → surah by index
-    if str(text).strip().isdigit():
+    if text.isdigit():
         return True
-    # Check against known surah names
-    try:
-        utils.get_index_soure_from_name_soure(str(text).strip())
-        return True
-    except (ValueError, Exception):
-        return False
+    return _local_surah_index(text) is not None
 
 
 class QuranicNLP:
@@ -329,7 +347,7 @@ class QuranicNLP:
         if text.isdigit():
             soure = int(text)
         else:
-            soure = utils.get_index_soure_from_name_soure(text)
+            soure = _local_surah_index(text) or utils.get_index_soure_from_name_soure(text)
         surah_name = utils.get_sourah_name_from_soure_index(soure)
         docs = surah_docs(self, soure)
         return SurahDoc(docs, surah_name, soure)
@@ -371,13 +389,15 @@ class Pipeline:
             print(doc._.surah, doc._.ayah)
     """
 
-    def __new__(cls, pipeline: str, translation_lang: str = None):
-        return QuranicNLP(NLP(pipeline, translation_lang).nlp)
+    def __new__(cls, pipeline: str, translation_lang: str = None,
+                hadiths: bool = False, verbose: bool = False):
+        return QuranicNLP(NLP(pipeline, translation_lang, hadiths=hadiths, verbose=verbose).nlp)
 
 
-def load_pipeline(pipelines: str, translation_lang: str = None):
+def load_pipeline(pipelines: str, translation_lang: str = None,
+                  hadiths: bool = False, verbose: bool = False):
     """Load and return a pipeline (alias for ``Pipeline``)."""
-    return QuranicNLP(NLP(pipelines, translation_lang).nlp)
+    return QuranicNLP(NLP(pipelines, translation_lang, hadiths=hadiths, verbose=verbose).nlp)
 
 
 def search_all(nlp, text: str, max_results: int = None) -> list:
