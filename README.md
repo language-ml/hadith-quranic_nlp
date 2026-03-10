@@ -49,6 +49,7 @@ Contents:
 - [Word-level Analysis](#word-level-analysis)
 - [JSON Output](#json-output)
 - [Surah-Level Graph Analysis](#surah-level-graph-analysis)
+- [Token Pattern Queries](#token-pattern-queries)
 - [Hadiths](#hadiths)
 - [Visualization](#visualization)
 - [Contributors](#contributors)
@@ -324,6 +325,101 @@ G = graph.build_graph(docs, rep='tfidf')
 T = graph.mst(G)
 doc, scores = graph.central_verse(G, docs, method='pagerank')
 print(doc._.surah, doc._.ayah, doc._.text)
+```
+
+## Token Pattern Queries
+
+`quranic_nlp.query` provides spaCy-style token-pattern matching across Quranic verses. Patterns filter on any combination of `ROOT`, `LEMMA`, `POS`, `DEP`, `TEXT`, and `ARC`, with proximity constraints and quantifiers.
+
+### Pattern syntax
+
+| Key | Description |
+|-----|-------------|
+| `TEXT` | Exact surface form (with diacritics) |
+| `LOWER` | Lowercase surface form |
+| `LEMMA` | Canonical lemma |
+| `POS` | Universal POS tag (`'NOUN'`, `'VERB'`, `'ADJ'`, …) |
+| `DEP` | Dependency relation label |
+| `ROOT` | Trilateral Arabic root (e.g. `'رحم'`, `'علم'`) |
+| `ARC` | Dependency arc direction (`'LTR'` / `'RTL'`) |
+| `OP` | Quantifier: `'?'` (0-1), `'*'` (0+), `'+'` (1+), `'!'` (must not match) |
+| `SKIP` | Max tokens to skip before this element — enables proximity matching |
+
+Attribute values can be a string (exact match), a list (any-of), or a dict `{"IN": [...]}` / `{"NOT_IN": [...]}` / `{"REGEX": "..."}`.
+
+### `VerseMatcher` — full pattern control
+
+```python
+from quranic_nlp import language, query
+
+nlp = language.Pipeline('pos,root,lem,dep')
+matcher = query.VerseMatcher(nlp)
+
+# Verses containing a NOUN with root رحم
+matcher.add('MERCY_NOUN', [[{'ROOT': 'رحم', 'POS': 'NOUN'}]])
+
+# رحم root within 5 tokens of lemma الله  (SKIP for proximity)
+matcher.add('MERCY_NEAR_ALLAH', [[
+    {'ROOT': 'رحم'},
+    {'LEMMA': 'الله', 'SKIP': 5},
+]])
+
+# VERB followed within 3 tokens by a NOUN
+matcher.add('VERB_THEN_NOUN', [[
+    {'POS': 'VERB'},
+    {'POS': 'NOUN', 'SKIP': 3},
+]])
+
+# Two alternatives under one key
+matcher.add('FORGIVENESS', [
+    [{'ROOT': 'غفر'}],
+    [{'ROOT': 'عفو'}],
+])
+
+# Search a single surah — yields (doc, [(key, start, end), ...])
+for doc, matches in matcher.search(surah=2):
+    for key, start, end in matches:
+        print(key, doc._.ayah, doc[start:end])
+
+# Search pre-computed docs (fastest — pipeline already ran)
+docs = language.surah_docs(nlp, 'بقره')
+for doc, matches in matcher.search(docs=docs):
+    for key, start, end in matches:
+        print(key, doc._.surah, doc._.ayah, doc[start:end])
+```
+
+### Convenience functions
+
+```python
+# All verses where root رحم appears as a NOUN
+results = query.find_by_root(nlp, 'رحم', pos='NOUN', surah=1)
+
+# All verses containing lemma الله
+results = query.find_by_lemma(nlp, 'الله', surah=2)
+
+# All verses with at least one VERB
+results = query.find_by_pos(nlp, 'VERB', surah=1)
+
+# رحم within 5 tokens of الله  (either direction)
+results = query.find_near(nlp,
+    {'ROOT': 'رحم'}, {'LEMMA': 'الله'}, max_dist=5, surah=1)
+for doc, s1, e1, s2, e2 in results:
+    print(doc._.ayah, doc[s1:e1], '…', doc[s2:e2])
+
+# Verses containing BOTH رحم root AND علم root  (AND mode)
+results = query.find_verses(nlp,
+    [{'ROOT': 'رحم'}, {'ROOT': 'علم'}], mode='AND')
+
+# Verses containing رحم OR غفر root  (OR mode)
+results = query.find_verses(nlp,
+    [{'ROOT': 'رحم'}, {'ROOT': 'غفر'}], mode='OR')
+
+# KWIC concordance — keyword in context
+rows = query.concordance(nlp, {'ROOT': 'رحم'}, context=3, surah=1)
+for row in rows:
+    left  = ' '.join(t.text for t in row['left'])
+    right = ' '.join(t.text for t in row['right'])
+    print(f"{row['surah']}:{row['ayah']}  {left} [{row['match'].text}] {right}")
 ```
 
 ## Hadiths
