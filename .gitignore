@@ -74,3 +74,6 @@ quranic_nlp/config/settings.json
 
 # macOS
 .DS_Store
+
+# Paper (local only)
+paper/
