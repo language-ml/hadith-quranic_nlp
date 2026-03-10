@@ -100,6 +100,110 @@ class TestGetIndexSoureFromNameSoure:
                 utils.get_index_soure_from_name_soure('notasurah')
 
 
+class TestGetText:
+    def test_returns_string_for_valid_verse(self):
+        """get_text should return a non-empty string for a known verse."""
+        text = utils.get_text(1, 1)
+        assert isinstance(text, str)
+        assert len(text) > 0
+
+    def test_returns_none_for_invalid_verse(self):
+        """get_text should return None for a non-existent verse."""
+        result = utils.get_text(999, 999)
+        assert result is None
+
+    def test_fatiha_verse1_content(self):
+        """Surah 1, Ayah 1 should contain 'بسم'."""
+        text = utils.get_text(1, 1)
+        assert 'بسم' in text or 'بِسْمِ' in text
+
+    def test_different_verses_differ(self):
+        """Two different verses should return different text."""
+        assert utils.get_text(1, 1) != utils.get_text(1, 2)
+
+
+class TestGetRevelationOrder:
+    def test_returns_value_for_valid_surah(self):
+        order = utils.get_revelation_order(1)
+        assert order is not None
+
+    def test_different_surahs_may_differ(self):
+        """Revelation orders for surah 1 and 2 should be different numbers."""
+        assert utils.get_revelation_order(1) != utils.get_revelation_order(2)
+
+
+class TestGetSourahNameFromSoureIndex:
+    def test_surah1_name(self):
+        name = utils.get_sourah_name_from_soure_index(1)
+        assert isinstance(name, str)
+        assert len(name) > 0
+
+    def test_different_surahs_have_different_names(self):
+        assert utils.get_sourah_name_from_soure_index(1) != utils.get_sourah_name_from_soure_index(2)
+
+
+class TestGetSimAyahs:
+    def test_returns_list_of_tuples(self):
+        """get_sim_ayahs should return a list of (ref, score) tuples."""
+        result = utils.get_sim_ayahs(1, 2)
+        assert isinstance(result, list)
+        assert len(result) > 0
+        assert isinstance(result[0], tuple)
+        assert len(result[0]) == 2
+
+    def test_ref_is_string(self):
+        """Each ref should be a 'surah#ayah' string."""
+        result = utils.get_sim_ayahs(1, 2)
+        ref, score = result[0]
+        assert isinstance(ref, str)
+        assert '#' in ref
+
+    def test_score_is_float(self):
+        """Each score should be a float."""
+        result = utils.get_sim_ayahs(1, 2)
+        ref, score = result[0]
+        assert isinstance(score, float)
+
+    def test_scores_are_positive(self):
+        """All similarity scores should be positive."""
+        result = utils.get_sim_ayahs(1, 2)
+        assert all(score > 0 for _, score in result)
+
+    def test_unknown_verse_returns_empty(self):
+        """A verse with no similarity data should return an empty list."""
+        result = utils.get_sim_ayahs(999, 999)
+        assert result == []
+
+
+class TestGetWordsAndSpaces:
+    def test_returns_tuple_of_two(self):
+        words, spaces = utils.get_words_and_spaces(1, 1)
+        assert words is not None
+        assert spaces is not None
+
+    def test_words_and_spaces_same_length(self):
+        words, spaces = utils.get_words_and_spaces(1, 1)
+        assert len(words) == len(spaces)
+
+    def test_words_are_strings(self):
+        words, _ = utils.get_words_and_spaces(1, 1)
+        assert all(isinstance(w, str) for w in words)
+
+    def test_spaces_are_booleans(self):
+        import numpy as np
+        _, spaces = utils.get_words_and_spaces(1, 1)
+        assert spaces.dtype == np.bool_
+
+    def test_fatiha_verse1_word_count(self):
+        """Surah 1, Ayah 1 should have 7 words."""
+        words, _ = utils.get_words_and_spaces(1, 1)
+        assert len(words) == 7
+
+    def test_invalid_verse_raises(self):
+        with pytest.raises((FileNotFoundError, IndexError)):
+            utils.get_words_and_spaces(999, 999)
+
+
 class TestGetHadiths:
     def test_returns_list_on_success(self):
         ids_resp = MagicMock()
@@ -169,3 +273,13 @@ class TestGetTranslations:
         with patch('builtins.open', mock_open):
             result = utils.get_translations('fa', 2, 1)
         assert isinstance(result, dict)
+
+    def test_all_translators_dict_keys_are_strings(self):
+        mock_open = MagicMock()
+        mock_open.return_value.__enter__ = MagicMock(
+            return_value=MagicMock(read=MagicMock(return_value='2|2|ترجمه\n2|3|بعدی\n'))
+        )
+        mock_open.return_value.__exit__ = MagicMock(return_value=False)
+        with patch('builtins.open', mock_open):
+            result = utils.get_translations('fa', 2, 1)
+        assert all(isinstance(k, str) for k in result.keys())

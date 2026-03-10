@@ -21,13 +21,13 @@
     <span> | </span>
       Multilingual Search    <br>
     <span> | </span>
-      Quranic Extractions        
+      Quranic Extractions
     <span> | </span>
       Revelation Order
     <span> | </span> <br>
       Embeddings (coming soon)
     <span> | </span>
-      Translations    
+      Translations
   </h5>
 </div>
 
@@ -38,9 +38,16 @@ Quranic NLP is a computational toolbox to conduct various syntactic and semantic
 Contents:
 
 - [Installation](#installation)
-- [Pipeline (dep,pos,lem,root)](#pipeline)
-- [Format Inputs](#format-inputs)
-- [Example](#example)
+- [Pipeline](#pipeline)
+- [Input Formats](#input-formats)
+- [Verse Information](#verse-information)
+- [Translations](#translations)
+- [Similar Verses](#similar-verses)
+- [Multiple Matches](#multiple-matches)
+- [Word-level Analysis](#word-level-analysis)
+- [JSON Output](#json-output)
+- [Hadiths](#hadiths)
+- [Visualization](#visualization)
 - [Contributors](#contributors)
 - [Contributing](#contributing)
 
@@ -84,326 +91,183 @@ quranic_data
 
 ## Pipeline
 
-The NLP pipeline contains morphological information e.g., Lemmatizer as well as POS Tagger and Dependancy Parser in a `Spacy`-like pipeline.
+Available pipeline components:
+
+| Key | Description |
+|-----|-------------|
+| `dep` | Dependency parsing |
+| `pos` | Part-of-speech tagging |
+| `root` | Root extraction |
+| `lem` | Lemmatization |
 
 ```python
-from quranic_nlp import language
+from quranic_nlp import language, utils, constant
 
-translation_translator = 'fa#1'
 pips = 'dep,pos,root,lem'
-nlp = language.Pipeline(pips, translation_translator)
+nlp = language.Pipeline(pips, translation_lang='fa#1')
 ```
 
-[`Doc`](https://spacy.io/api/doc) object has different extensions.
-First, there are `sentences` in `doc` referring to the verses.
-Second, there are `ayah` in `doc` which is indicate number ayeh in soure.
-Third, there are `surah` in `doc` which is indicate name of soure.
-Fourth, there are `revelation_order` in `doc` which is indicate order of revelation of the ayeh.
-`doc` which is the list of [`Token`](https://spacy.io/api/token) also has its own extensions.
-The pips is information to use from quranic_nlp.
-The translation_translator is language for translate quran such that language (fa) or language along with \# along with number books.
-For see all translate run below code
+To see all available translation languages and translators:
+
 ```python
-from quranic_nlp import utils
 utils.print_all_translations()
 ```
-Quranic NLP has its own spacy extensions. If related pipeline is not called, that extension cannot be used.
 
-## Format Inputs
+## Input Formats
 
-There are three ways to format the input:
-
-1. number surah along with \# along with number ayah.
-2. name surah along with \# along with number ayah.
-3. search text in quran.
-
-Note The last two calls require access to the internet for an API call.
+Three ways to reference a verse:
 
 ```python
-from quranic_nlp import language
-
-translation_translator = 'fa#1'
-pips = 'dep,pos,root,lem'
-nlp = language.Pipeline(pips, translation_translator)
-
+# 1. surah_number#ayah_number (no internet required)
 doc = nlp('1#1')
+
+# 2. surah_name#ayah_number (requires internet)
 doc = nlp('حمد#1')
-doc = nlp('رب العالمین')
+
+# 3. Free Arabic text — returns a list of all matching docs (requires internet)
+docs = nlp('رب العالمین')
 ```
 
-## Example
-Two examples are provided below to demonstrate the usage of the library:
+## Verse Information
 
-First, Displaying data from Surah Al-Fatiha, Verse 1:
 ```python
+doc = nlp('1#1')
 
-first_doc = nlp('1#1')
-```
-
-
-Second, Displaying data from Surah Aal-i-Imran, Verse 200:
-```python
-
-second_doc = nlp('3#200')
+print(doc)                   # بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِیمِ
+print(doc._.text)            # بِسْمِ اللَّهِ الرَّحْمَـٰنِ الرَّحِيمِ  (full diacritics)
+print(doc._.surah)           # فاتحه
+print(doc._.ayah)            # 1
+print(doc._.revelation_order)  # 5
 ```
 
-We have two functional sections that can be used with any input:
+## Translations
 
-1. Verse Information: This section provides detailed information about a specific verse in the Quran. 
-The information related to a verse is structured as follows:
+Pass `'<lang>#<index>'` for a single translator (returns a string):
 
-    * Verse Text and Meaning: The text of the verse is provided along with its meaning or translation.
-    * Similar Verses: Similar verses are included, following the format Surah#Verse, along with the name of the verse. These verses share similarities in content or theme.
-    * Verse Order: The order of the verse within the Surah is mentioned.
-    Revelation Order: The chronological order of the revelation of the verse is specified.
-
-First, Displaying data from Surah Al-Fatiha, Verse 1:
 ```python
-print(first_doc)
-```
-```python
-بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِیمِ 
-```
-```python
-print(first_doc._.text)
-```
-```python
-بِسْمِ اللَّهِ الرَّحْمَـٰنِ الرَّحِيمِ
-```
-```python
-print(first_doc._.surah)
-```
-```python
-فاتحه
-```
-```python
-print(first_doc._.ayah)
-```
-```python
-1
-```
-```python
-print(first_doc._.revelation_order)
-```
-```python
-63
-```
-```python
-print(first_doc._.translations)
-```
-```python
-ستايش خدا را كه پروردگار جهانيان است.
-```
-
-To get **all** translators for a language at once, omit the `#index` — translations are returned as a `dict` keyed by translator name:
-```python
-nlp_fa_all = language.Pipeline(pips, 'fa')
-doc = nlp_fa_all('1#2')
+nlp_en = language.Pipeline(pips, 'en#16')   # Yusuf Ali
+doc = nlp_en('1#1')
 print(doc._.translations)
-```
-```python
-{'ansarian': 'همه ستایش ها، ویژه خدا، مالک و مربّی جهانیان است.',
- 'ayati': 'ستايش خدا را كه پروردگار جهانيان است.',
- 'bahrampour': 'ستايش خداى را كه پروردگار جهانيان است',
- ...}
-```
-```python
-print(first_doc._.sim_ayahs[:5])
-```
-```python
-[('27#30', 0.7509), ('1#3', 0.5335), ('55#1', 0.3165), ('41#2', 0.2968), ('2#163', 0.2780)]
-```
-Second, Displaying data from Surah Aal-i-Imran, Verse 200:
-```python
-print(second_doc)
-```
-```python
-يَا أَیُّهَا الَّذِينَ  آمَن اِصْبِر وَ صَابِر وَ رَابِط وَ اِتَّق اللَّهَ لَعَلَّکُمْ تُفْلِحُو اُو اُو اُو اُو اُو نَ 
-```
-```python
-print(second_doc._.text)
-```
-```python
-يَا أَيُّهَا الَّذِينَ آمَنُوا اصْبِرُوا وَصَابِرُوا وَرَابِطُوا وَاتَّقُوا اللَّهَ لَعَلَّكُمْ تُفْلِحُونَ
-```
-```python
-print(second_doc._.surah)
-```
-```python
-آل عمران
-```
-```python
-print(second_doc._.ayah)
-```
-```python
-200
-```
-```python
-print(second_doc._.revelation_order)
-```
-```python
-89
-```
-```python
-print(second_doc._.translations)
-```
-```python
-اى كسانى كه ايمان آورده‌ايد، شكيبا باشيد و ديگران را به شكيبايى فراخوانيد و در جنگها پايدارى كنيد و از خدا بترسيد، باشد كه رستگار شويد.
-```
-```python
-print(second_doc._.sim_ayahs[:5])
-```
-```python
-[('3#130', 0.8921), ('5#35', 0.8134), ('9#119', 0.7645), ('33#70', 0.7201), ('2#189', 0.6983)]
+# In the name of Allah, the Beneficent, the Merciful.
 ```
 
-2. Word Information: In this section, you will find information specifically related to the words within a particular verse.
-The information related to a verse is structured as follows:
-    * Word Text: The actual text of the word.
-    * Tag: The part-of-speech tag that describes the word's grammatical category.
-    * Dependency: The dependency relationship of the word within the sentence.
-    * Lemma: The base or dictionary form of the word.
-    * Root: The root form of the word, which captures its core meaning.
-    * Head: The head word to which the current word is dependent.
-    * Arc Dep: The arc dependency label that represents the grammatical relationship between the head word and the current word.
-    * Rel: The semantic or syntactic relationship between the head word and the current word.
-First, Displaying data from Surah Al-Fatiha, Verse 1:
-I will show third word in verse.
+Pass `'<lang>'` (no index) for all translators (returns a `dict` keyed by translator name):
+
 ```python
-word=first_doc[2]
-print(word)
-```
-```python
-اللَّهِ
-```
-```python
-print(word.dep_)
-```
-```python
-نعت
-```
-```python
-print(word.head)
-```
-```python
-رَّحِیمِ
-```
-```python
-print(word.lemma_)
-```
-```python
-ٱللَّه
-```
-```python
-print(word.pos_)
-from quranic_nlp import constant
-print(constant.POS_UNI_FA[word.pos_])
-```
-```python
-NOUN
-اسم
-```
-```python
-print(word._.dep_arc)
-```
-```python
-LTR
-```
-```python
-print(word._.root)
-```
-```python
-اله
+nlp_fa = language.Pipeline(pips, 'fa')
+doc = nlp_fa('1#2')
+print(doc._.translations)
+# {
+#   'ansarian': 'همه ستایش ها، ویژه خدا، مالک و مربّی جهانیان است.',
+#   'ayati':    'ستايش خدا را كه پروردگار جهانيان است.',
+#   'bahrampour': 'ستايش خداى را كه پروردگار جهانيان است',
+#   ...   # 12 Persian translators total
+# }
 ```
 
-Second, Displaying data from Surah Aal-i-Imran, Verse 200:
-I will show sixth word in verse.
+## Similar Verses
+
+`doc._.sim_ayahs` returns a list of `(ref, score)` tuples sorted by similarity score:
+
 ```python
-word=second_doc[5]
-print(word)
+doc = nlp('1#2')
+for ref, score in doc._.sim_ayahs[:5]:
+    print(f'{ref:10s}  score={score:.4f}')
 ```
-```python
-اِصْبِر
 ```
-```python
-print(word.dep_)
-```
-```python
-الف زینت
-```
-```python
-print(word.head)
-```
-```python
-ا
-```
-```python
-print(word.lemma_)
-```
-```python
-صَبَرَ
-```
-```python
-print(word.pos_)
-from quranic_nlp import constant
-print(constant.POS_UNI_FA[word.pos_])
-```
-```python
-VERB
-فعل
-```
-```python
-print(word._.dep_arc)
-```
-```python
-LTR
-```
-LTR : Left to Right
-RTL : Right to Left
-```python
-print(word._.root)
-```
-```python
-صبر
+37#182      score=1.0000
+6#45        score=0.5199
+40#65       score=0.4620
+10#10       score=0.3862
+39#75       score=0.3793
 ```
 
+## Multiple Matches
 
+When free Arabic text matches multiple verses, `nlp(text)` returns a **list of docs**:
 
-### Multiple Matches
+```python
+docs = nlp('رب العالمین')
+print(f'Found {len(docs)} matching verses')
+for doc in docs[:3]:
+    print(doc._.surah, doc._.ayah, '—', doc._.text)
+```
+```
+فاتحه 2 — الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ
+مائده 28 — لَئِن بَسَطتَ إِلَيَّ يَدَكَ...
+انعام 45 — فَقُطِعَ دَابِرُ الْقَوْمِ...
+```
 
-When a free-text query matches multiple verses, use `search_all` to get all of them:
+You can also call `search_all` explicitly with a `max_results` cap:
 
 ```python
 docs = language.search_all(nlp, 'رب العالمین', max_results=5)
-for doc in docs:
-    print(doc._.surah, doc._.ayah, doc._.text)
-```
-```python
-فاتحه 2 الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ
-مائده 28 لَئِن بَسَطتَ إِلَيَّ يَدَكَ...
-انعام 45 فَقُطِعَ دَابِرُ الْقَوْمِ...
 ```
 
-At the end, to jsonify the results you can use the following:
+## Word-level Analysis
 
 ```python
-dictionary = language.to_json(pips, doc)
-print(dictionary)
+doc = nlp('1#1')
+word = doc[2]  # third word: اللَّهِ
+
+print(word)                            # اللَّهِ
+print(word.pos_)                       # NOUN
+print(constant.POS_UNI_FA[word.pos_]) # اسم
+print(word.lemma_)                     # ٱللَّه
+print(word._.root)                     # اله
+print(word.dep_)                       # نعت
+print(word._.dep_arc)                  # LTR  (Left-to-Right arc)
+print(word.head)                       # رَّحِیمِ
 ```
+
+Print a table of all words:
 
 ```python
-[{'id': 1, 'text': بِ, 'root': '', 'lemma': '', 'pos': 'INTJ', 'rel': 'مجرور', 'arc': 'LTR', 'head': سْمِ}, {'id': 2, 'text': سْمِ, 'root': 'سمو', 'lemma': 'ٱسْم', 'pos': 'NOUN', 'rel': 'مضاف الیه ', 'arc': 'LTR', 'head': اللَّهِ}, {'id': 3, 'text': اللَّهِ, 'root': 'اله', 'lemma': 'ٱللَّه', 'pos': 'NOUN', 'rel': 'نعت', 'arc': 'LTR', 'head': رَّحِیمِ}, {'id': 4, 'text': ال, 'root': '', 'lemma': '', 'pos': 'INTJ', 'rel': 'تعریف', 'arc': 'RTL', 'head': رَّحْمَنِ}, {'id': 5, 'text': رَّحْمَنِ, 'root': 'رحم', 'lemma': 'رَّحْمَٰن', 'pos': 'NOUN', 'rel': '', 'arc': None, 'head': رَّحْمَنِ}, {'id': 6, 'text': ال, 'root': '', 'lemma': '', 'pos': 'INTJ', 'rel': 'تعریف', 'arc': 'RTL', 'head': رَّحِیمِ}, {'id': 7, 'text': رَّحِیمِ, 'root': 'رحم', 'lemma': 'رَّحِيم', 'pos': 'NOUN', 'rel': '', 'arc': None, 'head': رَّحِیمِ}]
+print(f"{'Word':<20} {'POS':<8} {'Lemma':<15} {'Root':<10} {'Dep'}")
+print('-' * 65)
+for token in doc:
+    print(f'{str(token):<20} {token.pos_:<8} {token.lemma_:<15} {str(token._.root):<10} {token.dep_}')
 ```
 
-To show the results you can use the following:
+## JSON Output
+
+```python
+import json
+
+result = language.to_json(pips, doc)
+print(json.dumps(result, ensure_ascii=False, indent=2))
+```
+```json
+[
+  {"id": 1, "text": "بِ",      "root": "",    "lemma": "",       "pos": "INTJ", "rel": "مجرور",      "arc": "LTR", "head": "سْمِ"},
+  {"id": 2, "text": "سْمِ",   "root": "سمو", "lemma": "ٱسْم",  "pos": "NOUN", "rel": "مضاف الیه", "arc": "LTR", "head": "اللَّهِ"},
+  {"id": 3, "text": "اللَّهِ","root": "اله", "lemma": "ٱللَّه","pos": "NOUN", "rel": "نعت",        "arc": "LTR", "head": "رَّحِیمِ"},
+  ...
+]
+```
+
+## Hadiths
+
+```python
+hadiths = doc._.hadiths
+if hadiths:
+    print(f'Found {len(hadiths)} hadith(s)')
+    print(hadiths[0])
+else:
+    print('No hadiths found or API unavailable.')
+```
+
+## Visualization
+
+Render the dependency parse tree using spaCy's displacy:
+
 ```python
 from spacy import displacy
-displacy.serve(doc, style="dep")
-options = {"compact": True, "bg": "#09a3d5",
-           "color": "white", "font": "xb-niloofar"}
-displacy.serve(doc, style="dep", options=options)
 
+options = {'compact': True, 'bg': '#09a3d5', 'color': 'white', 'font': 'Arial'}
+displacy.render(doc, style='dep', options=options, jupyter=True)
 ```
+
 ![](./docs/image_readme/fig.png "")
 ![](./docs/image_readme/fig2.png "")
 
@@ -434,4 +298,3 @@ We warmly welcome contributions from the community! Whether you are a researcher
 To contribute, fork the repository, make your changes, and open a pull request. For larger changes, please open an issue first to discuss your idea.
 
 We believe open collaboration leads to better tools for everyone. Every contribution, big or small, is valued and appreciated.
-
