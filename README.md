@@ -104,7 +104,12 @@ Available pipeline components:
 from quranic_nlp import language, utils, constant
 
 pips = 'dep,pos,root,lem'
+
+# Basic pipeline — no hadiths fetching (default)
 nlp = language.Pipeline(pips, translation_lang='fa#1')
+
+# With hadith fetching enabled (makes one HTTP request per verse — use for single-verse lookups)
+nlp_with_hadiths = language.Pipeline(pips, translation_lang='fa#1', hadiths=True)
 ```
 
 To see all available translation languages and translators:
@@ -115,16 +120,21 @@ utils.print_all_translations()
 
 ## Input Formats
 
-Three ways to reference a verse:
+Four ways to reference a verse or surah:
 
 ```python
-# 1. surah_number#ayah_number (no internet required)
+# 1. surah_number#ayah_number — single Doc (no internet required)
 doc = nlp('1#1')
 
-# 2. surah_name#ayah_number (requires internet)
+# 2. surah_name#ayah_number — single Doc (requires internet)
 doc = nlp('حمد#1')
 
-# 3. Free Arabic text — returns a list of all matching docs (requires internet)
+# 3. surah name or index with surah=True — SurahDoc (all verses of that surah)
+surah = nlp('فاتحه', surah=True)   # by Arabic name
+surah = nlp(1,       surah=True)   # by integer index
+surah = nlp('1',     surah=True)   # by string index
+
+# 4. Free Arabic text — list[Doc] of all matching verses (requires internet)
 docs = nlp('رب العالمین')
 ```
 
@@ -133,12 +143,14 @@ docs = nlp('رب العالمین')
 ```python
 doc = nlp('1#1')
 
-print(doc)                   # بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِیمِ
-print(doc._.text)            # بِسْمِ اللَّهِ الرَّحْمَـٰنِ الرَّحِيمِ  (full diacritics)
-print(doc._.surah)           # فاتحه
-print(doc._.ayah)            # 1
+print(doc._.text)              # بِسْمِ اللَّهِ الرَّحْمَـٰنِ الرَّحِيمِ  (full diacritics)
+print(doc._.simple_text)       # بسم الله الرحمن الرحیم  (no diacritics)
+print(doc._.surah)             # فاتحه
+print(doc._.ayah)              # 1
 print(doc._.revelation_order)  # 5
 ```
+
+> **Note:** `str(doc)` returns the morphologically segmented tokens (e.g. `بِ سْمِ اللَّهِ ...`), not the original verse text. Use `doc._.text` for the full verse text with diacritics, or `doc._.simple_text` for text without diacritics.
 
 ## Translations
 
@@ -248,17 +260,17 @@ print(json.dumps(result, ensure_ascii=False, indent=2))
 
 ## Surah-Level Graph Analysis
 
-`nlp('فاتحه')` (or `nlp(1)`) returns a `SurahDoc` — an object containing all verse docs for the surah and tools for graph-based analysis.
+Pass `surah=True` to get a `SurahDoc` — an object containing all verse docs for the surah and tools for graph-based analysis.
 
 ```python
 from quranic_nlp import language, graph
 
 nlp = language.Pipeline('pos,root,lem', 'fa#1')
 
-# Get all verses of a surah as a SurahDoc
-surah = nlp('فاتحه')          # by Arabic name
-# surah = nlp(1)              # by integer index
-# surah = nlp('1')            # by string index
+# Get all verses of a surah as a SurahDoc (surah=True required)
+surah = nlp('فاتحه', surah=True)   # by Arabic name
+# surah = nlp(1,   surah=True)     # by integer index
+# surah = nlp('1', surah=True)     # by string index
 
 print(f'{surah.surah}: {len(surah)} verses')
 
@@ -313,7 +325,13 @@ print(doc._.surah, doc._.ayah, doc._.text)
 
 ## Hadiths
 
+Hadith fetching is **disabled by default** (it makes one HTTP request per verse, which is slow for surah-level processing). Enable it explicitly with `hadiths=True`:
+
 ```python
+# Create a pipeline with hadith fetching enabled
+nlp_h = language.Pipeline(pips, translation_lang='fa#1', hadiths=True)
+doc = nlp_h('1#1')
+
 hadiths = doc._.hadiths
 if hadiths:
     print(f'Found {len(hadiths)} hadith(s)')
@@ -321,6 +339,8 @@ if hadiths:
 else:
     print('No hadiths found or API unavailable.')
 ```
+
+When `hadiths=False` (the default), `doc._.hadiths` is `None`.
 
 ## Visualization
 

@@ -96,6 +96,11 @@ def get_sim_ayahs(soure, ayeh):
     return _sim_ayahs_index().get((soure, ayeh), [])
 
 
+def strip_diacritics(text):
+    """Remove Arabic diacritics (ḥarakāt, sukūn, shadda, etc.) from *text*."""
+    return re.sub(r'[\u0610-\u061A\u064B-\u065F\u0670]', '', str(text))
+
+
 def get_text(soure, ayeh):
     """Return the raw Quranic text for the given verse."""
     return _quran_xml_index().get(soure, {}).get(ayeh)
@@ -118,13 +123,11 @@ def get_translations(lang_input, soure, ayeh):
     if not lang_input:
         return ''
 
-    temp_ayeh = ayeh + 1 if soure == 1 else ayeh
-
     def _extract(txt):
-        start = re.search(rf"{soure}\|{temp_ayeh}\|", txt)
+        start = re.search(rf"{soure}\|{ayeh}\|", txt)
         if start is None:
             return ''
-        end = re.search(rf"{soure}\|{temp_ayeh + 1}\|", txt)
+        end = re.search(rf"{soure}\|{ayeh + 1}\|", txt)
         if end is not None:
             return txt[start.end():end.start()]
         end2 = re.search(rf"{soure + 1}\|1\|", txt)

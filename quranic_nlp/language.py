@@ -23,7 +23,7 @@ def _register_extensions():
             Token.set_extension(name, default=None)
 
     for name in ('sentences', 'revelation_order', 'surah', 'ayah',
-                 'sim_ayahs', 'text', 'translations', 'hadiths',
+                 'sim_ayahs', 'text', 'simple_text', 'translations', 'hadiths',
                  'soure_index', 'ayeh_index'):
         if not Doc.has_extension(name):
             Doc.set_extension(name, default=None)
@@ -58,6 +58,7 @@ def _init_quran(doc):
     sent._.surah = utils.get_sourah_name_from_soure_index(soure)
     sent._.ayah = ayeh
     sent._.text = utils.get_text(soure, ayeh)
+    sent._.simple_text = utils.strip_diacritics(sent._.text) if sent._.text else None
     sent._.translations = utils.get_translations(_translation_lang, soure, ayeh)
     sent._.sim_ayahs = utils.get_sim_ayahs(soure, ayeh)
     sent._.hadiths = utils.get_hadiths(soure, ayeh) if _fetch_hadiths else None

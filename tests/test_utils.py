@@ -256,7 +256,7 @@ class TestGetTranslations:
         """'fa#1' should return a single string translation."""
         mock_open = MagicMock()
         mock_open.return_value.__enter__ = MagicMock(
-            return_value=MagicMock(read=MagicMock(return_value='1|2|ترجمه\n1|3|بعدی\n'))
+            return_value=MagicMock(read=MagicMock(return_value='1|1|ترجمه\n1|2|بعدی\n'))
         )
         mock_open.return_value.__exit__ = MagicMock(return_value=False)
         with patch('builtins.open', mock_open):
@@ -267,7 +267,7 @@ class TestGetTranslations:
         """'fa' (no index) should return a dict keyed by translator name."""
         mock_open = MagicMock()
         mock_open.return_value.__enter__ = MagicMock(
-            return_value=MagicMock(read=MagicMock(return_value='2|2|ترجمه\n2|3|بعدی\n'))
+            return_value=MagicMock(read=MagicMock(return_value='2|1|ترجمه\n2|2|بعدی\n'))
         )
         mock_open.return_value.__exit__ = MagicMock(return_value=False)
         with patch('builtins.open', mock_open):
@@ -277,7 +277,7 @@ class TestGetTranslations:
     def test_all_translators_dict_keys_are_strings(self):
         mock_open = MagicMock()
         mock_open.return_value.__enter__ = MagicMock(
-            return_value=MagicMock(read=MagicMock(return_value='2|2|ترجمه\n2|3|بعدی\n'))
+            return_value=MagicMock(read=MagicMock(return_value='2|1|ترجمه\n2|2|بعدی\n'))
         )
         mock_open.return_value.__exit__ = MagicMock(return_value=False)
         with patch('builtins.open', mock_open):
