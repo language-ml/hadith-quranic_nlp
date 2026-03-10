@@ -8,7 +8,7 @@
 <div align="center">
   <a href="https://pypi.org/project/quranic-nlp/"><img src="https://img.shields.io/pypi/v/quranic-nlp?cache=0"></a>
   <a href=""><img src="https://img.shields.io/badge/license-Apache%202-blue.svg"></a>
-  <a href="https://colab.research.google.com/github/language-ml/hadith-quranic_nlp/blob/main/notebooks/quranic_nlp_demo.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>
+  <a href="https://colab.research.google.com/github/language-ml/quranic-nlp/blob/main/notebooks/quranic_nlp_demo.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>
 </div>
 
 <div align="center">
@@ -81,8 +81,8 @@ Data is downloaded once and stored inside the package directory automatically.
 To set up a local development environment:
 
 ```bash
-git clone https://github.com/language-ml/hadith-quranic_nlp.git
-cd hadith-quranic_nlp
+git clone https://github.com/language-ml/quranic-nlp.git
+cd quranic-nlp
 python -m venv .venv
 source .venv/bin/activate   # On Windows: .venv\Scripts\activate
 pip install -e .
