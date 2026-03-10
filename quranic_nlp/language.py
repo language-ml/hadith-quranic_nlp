@@ -295,8 +295,10 @@ class SurahDoc:
         return f"SurahDoc(surah={self.surah!r}, n_ayahs={len(self.docs)})"
 
 
-def _local_surah_index(text: str):
-    """Return 1-based surah index for *text* using local data only, or None."""
+def _resolve_surah_index(text: str) -> int:
+    """Return 1-based surah index for *text*, checking local data then API."""
+    if text.isdigit():
+        return int(text)
     # Try exact match, then with 'ال' prefix (e.g. 'فاتحه' → 'الفاتحه')
     candidates = {text}
     if not text.startswith('ال'):
@@ -304,23 +306,19 @@ def _local_surah_index(text: str):
     for idx, names in enumerate(constant.AYEH_INDEX):
         if candidates & set(names):
             return idx + 1
-    return None
-
-
-def _is_surah_input(text: str) -> bool:
-    """Return True if *text* looks like a surah name/index (not free-text search)."""
-    if text.isdigit():
-        return True
-    return _local_surah_index(text) is not None
+    # Fall back to API normalization
+    return utils.get_index_soure_from_name_soure(text)
 
 
 class QuranicNLP:
     """
-    Wrapper around a spaCy Language with smart dispatch based on input format:
+    Wrapper around a spaCy Language.
 
-    - ``'surah#ayah'`` (e.g. ``'1#1'``) → single ``Doc``
-    - surah name/index (e.g. ``'فاتحه'`` or ``1``) → ``SurahDoc``
-    - free Arabic text (e.g. ``'رب العالمین'``) → ``list[Doc]``
+    - ``nlp('1#1')``              → single ``Doc``
+    - ``nlp('حمد#1')``            → single ``Doc``
+    - ``nlp('فاتحه', surah=True)`` → ``SurahDoc`` (all verses of that surah)
+    - ``nlp(1, surah=True)``      → ``SurahDoc``
+    - ``nlp('رب العالمین')``       → ``list[Doc]`` (all matching verses)
 
     Use ``Pipeline(...)`` or ``load_pipeline(...)`` to get an instance.
     """
@@ -328,26 +326,23 @@ class QuranicNLP:
     def __init__(self, nlp):
         self._nlp = nlp
 
-    def __call__(self, text):
+    def __call__(self, text, surah: bool = False):
         """
         Process *text* and return:
 
         - A single ``Doc`` when *text* is a ``'surah#ayah'`` reference.
-        - A ``SurahDoc`` when *text* is a surah name or integer index.
+        - A ``SurahDoc`` when ``surah=True`` (name, Arabic or index).
         - A ``list[Doc]`` for free Arabic text, returning all matching verses.
         """
         text_str = str(text).strip()
         if '#' in text_str:
             return self._nlp(text_str)
-        if _is_surah_input(text_str):
+        if surah:
             return self._make_surah_doc(text_str)
         return search_all(self, text_str)
 
     def _make_surah_doc(self, text: str) -> 'SurahDoc':
-        if text.isdigit():
-            soure = int(text)
-        else:
-            soure = _local_surah_index(text) or utils.get_index_soure_from_name_soure(text)
+        soure = _resolve_surah_index(text)
         surah_name = utils.get_sourah_name_from_soure_index(soure)
         docs = surah_docs(self, soure)
         return SurahDoc(docs, surah_name, soure)

@@ -213,28 +213,32 @@ class TestQuranicNLPDispatch:
         mock_nlp.assert_called_once_with('1#1')
         assert result is mock_nlp.return_value
 
-    def test_surah_name_returns_surah_doc(self):
+    def test_surah_name_with_flag_returns_surah_doc(self):
         wrapper, mock_nlp = self._make_wrapper()
-        with patch('quranic_nlp.language._is_surah_input', return_value=True), \
-             patch('quranic_nlp.language.surah_docs', return_value=[MagicMock()] * 7), \
-             patch('quranic_nlp.utils.get_index_soure_from_name_soure', return_value=1), \
+        with patch('quranic_nlp.language.surah_docs', return_value=[MagicMock()] * 7), \
              patch('quranic_nlp.utils.get_sourah_name_from_soure_index', return_value='فاتحه'):
-            result = wrapper('فاتحه')
+            result = wrapper('فاتحه', surah=True)
         assert isinstance(result, language.SurahDoc)
         assert result.surah == 'فاتحه'
         assert len(result.docs) == 7
 
-    def test_integer_surah_returns_surah_doc(self):
+    def test_integer_surah_with_flag_returns_surah_doc(self):
         wrapper, mock_nlp = self._make_wrapper()
         with patch('quranic_nlp.language.surah_docs', return_value=[MagicMock()] * 7), \
              patch('quranic_nlp.utils.get_sourah_name_from_soure_index', return_value='فاتحه'):
-            result = wrapper('1')
+            result = wrapper('1', surah=True)
         assert isinstance(result, language.SurahDoc)
+
+    def test_surah_name_without_flag_returns_list(self):
+        wrapper, mock_nlp = self._make_wrapper()
+        with patch('quranic_nlp.language.search_all', return_value=[MagicMock()]) as mock_search:
+            result = wrapper('فاتحه')
+        assert isinstance(result, list)
+        mock_search.assert_called_once()
 
     def test_free_text_returns_list(self):
         wrapper, mock_nlp = self._make_wrapper()
-        with patch('quranic_nlp.language._is_surah_input', return_value=False), \
-             patch('quranic_nlp.language.search_all', return_value=[MagicMock(), MagicMock()]) as mock_search:
+        with patch('quranic_nlp.language.search_all', return_value=[MagicMock(), MagicMock()]) as mock_search:
             result = wrapper('رب العالمین')
         assert isinstance(result, list)
         mock_search.assert_called_once()
