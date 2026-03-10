@@ -1,4 +1,5 @@
 import xml.etree.ElementTree as ET
+import functools
 import pandas as pd
 import numpy as np
 import requests
@@ -10,31 +11,91 @@ import re
 from quranic_nlp import constant
 
 
-def get_sim_ayahs(soure, ayeh):
-    """Return list of similar verse references (as 'surah#ayah' strings) for the given verse."""
-    output = []
+# ---------------------------------------------------------------------------
+# Internal caches — built once on first access, reused for all subsequent calls
+# ---------------------------------------------------------------------------
+
+@functools.lru_cache(maxsize=1)
+def _semantic_index():
+    """Build {surah_idx: [filepath_per_ayah]} index from the data directory (once)."""
+    index = []
+    for i in range(1, 115):
+        files = recursive_glob(constant.AYEH_SEMANTIC, f'{i}-*.json')
+        if not files:
+            raise FileNotFoundError(
+                f'Data not found for surah {i}. '
+                'Run `quranic_data` to download required data files.'
+            )
+        files.sort(key=lambda f: int(''.join(filter(str.isdigit, f))))
+        index.append(files)
+    return index
+
+
+@functools.lru_cache(maxsize=None)
+def _verse_json(filepath):
+    """Load and cache a single verse JSON file."""
+    with open(filepath, encoding='utf-8') as f:
+        return json.load(f)
+
+
+@functools.lru_cache(maxsize=1)
+def _quran_xml_index():
+    """Parse the Quran XML once and return a nested {soure: {ayeh: text}} dict."""
+    root = ET.parse(constant.QURAN_XML).getroot()
+    index = {}
+    for sura in root.iter('sura'):
+        s = int(sura.attrib['index'])
+        index[s] = {}
+        for aya in sura.iter('aya'):
+            a = int(aya.attrib['index'])
+            index[s][a] = aya.attrib.get('text', '')
+    return index
+
+
+@functools.lru_cache(maxsize=1)
+def _quran_order_df():
+    """Read and cache the surah order CSV."""
+    df = pd.read_csv(constant.QURAN_ORDER)
+    df.index = df['index']
+    return df
+
+
+@functools.lru_cache(maxsize=1)
+def _sim_ayahs_index():
+    """Build and cache the full similarity lookup: {(soure, ayeh): [ref, ...]}."""
+    index = {}
     with open(constant.SIMILARITY_AYAT, encoding='utf-8') as f:
         for line in f:
             parts = line.split('\t')
             so = int(parts[0][:-3])
             ay = int(parts[0][-3:])
-            if soure == so and ay == ayeh:
-                for part in parts[1:]:
-                    ref, _ = part.split(':')
-                    output.append(f"{int(ref[:-3])}#{int(ref[-3:])}")
-    return output
+            refs = []
+            for part in parts[1:]:
+                ref, _ = part.split(':')
+                refs.append(f"{int(ref[:-3])}#{int(ref[-3:])}")
+            index[(so, ay)] = refs
+    return index
+
+
+@functools.lru_cache(maxsize=None)
+def _translation_file(filepath):
+    """Load and cache a translation text file."""
+    with open(filepath, encoding='utf-8') as f:
+        return f.read()
+
+
+# ---------------------------------------------------------------------------
+# Public API
+# ---------------------------------------------------------------------------
+
+def get_sim_ayahs(soure, ayeh):
+    """Return list of similar verse references (as 'surah#ayah' strings) for the given verse."""
+    return _sim_ayahs_index().get((soure, ayeh), [])
 
 
 def get_text(soure, ayeh):
     """Return the raw Quranic text for the given verse."""
-    tree = ET.parse(constant.QURAN_XML)
-    root = tree.getroot()
-    for sura in root.iter('sura'):
-        if sura.attrib.get('index') == str(soure):
-            for aya in sura.iter('aya'):
-                if aya.attrib.get('index') == str(ayeh):
-                    return aya.attrib.get('text')
-    return None
+    return _quran_xml_index().get(soure, {}).get(ayeh)
 
 
 def get_translations(lang_input, soure, ayeh):
@@ -54,40 +115,35 @@ def get_translations(lang_input, soure, ayeh):
     if not lang_input:
         return ''
 
-    if '#' in lang_input:
-        lang, index = lang_input.split('#')
-        name = constant.TRANSLATION[lang][int(index)].split()[0]
-        filepath = os.path.join(constant.TRANSLATE_QURAN, lang, name + '.txt')
-        with open(filepath, encoding='utf-8') as f:
-            txt = f.read()
-        temp_ayeh = ayeh + 1 if soure == 1 else ayeh
+    temp_ayeh = ayeh + 1 if soure == 1 else ayeh
+
+    def _extract(txt):
         start = re.search(rf"{soure}\|{temp_ayeh}\|", txt)
-        end = re.search(rf"{soure}\|{temp_ayeh + 1}\|", txt)
         if start is None:
             return ''
+        end = re.search(rf"{soure}\|{temp_ayeh + 1}\|", txt)
         if end is not None:
             return txt[start.end():end.start()]
         end2 = re.search(rf"{soure + 1}\|1\|", txt)
         if end2 is not None:
             return txt[start.end():end2.start()]
         return txt[start.end():].split('\n')[0]
+
+    if '#' in lang_input:
+        lang, index = lang_input.split('#')
+        name = constant.TRANSLATION[lang][int(index)].split()[0]
+        filepath = os.path.join(constant.TRANSLATE_QURAN, lang, name + '.txt')
+        return _extract(_translation_file(filepath))
     else:
-        translations = {}
-        for name_entry in constant.TRANSLATION[lang_input]:
-            name = name_entry.split()[0]
-            filepath = os.path.join(constant.TRANSLATE_QURAN, lang_input, name + '.txt')
-            with open(filepath, encoding='utf-8') as f:
-                txt = f.read()
-            temp_ayeh = ayeh + 1 if soure == 1 else ayeh
-            start = re.search(rf"{soure}\|{temp_ayeh}\|", txt)
-            end = re.search(rf"{soure}\|{temp_ayeh + 1}\|", txt)
-            if start is None:
-                translations[name] = ''
-            elif end is not None:
-                translations[name] = txt[start.end():end.start()]
-            else:
-                translations[name] = txt[start.end():].split('\n')[0]
-        return translations
+        return {
+            name_entry.split()[0]: _extract(
+                _translation_file(
+                    os.path.join(constant.TRANSLATE_QURAN, lang_input,
+                                 name_entry.split()[0] + '.txt')
+                )
+            )
+            for name_entry in constant.TRANSLATION[lang_input]
+        }
 
 
 def print_all_translations():
@@ -259,33 +315,18 @@ def get_index_soure_from_name_soure(soure_name):
 
 def get_revelation_order(soure):
     """Return the revelation order for the given surah index."""
-    df = pd.read_csv(constant.QURAN_ORDER)
-    df.index = df['index']
-    return df.loc[soure]['order_name']
+    return _quran_order_df().loc[soure]['order_name']
 
 
 def get_sourah_name_from_soure_index(soure):
     """Return the surah name for the given surah index."""
-    df = pd.read_csv(constant.QURAN_ORDER)
-    df.index = df['index']
-    return df.loc[soure]['soure']
+    return _quran_order_df().loc[soure]['soure']
 
 
 def get_words_and_spaces(soure, ayeh):
     """Return (words, spaces) arrays for the given verse from the semantic JSON data."""
-    qSyntaxSemantics = []
-    for i in range(1, 115):
-        files = recursive_glob(constant.AYEH_SEMANTIC, f'{i}-*.json')
-        if not files:
-            raise FileNotFoundError(
-                f'Data not found for surah {i}. '
-                'Run `quranic_data` to download required data files.'
-            )
-        files.sort(key=lambda f: int(''.join(filter(str.isdigit, f))))
-        qSyntaxSemantics.append(files)
-
-    with open(qSyntaxSemantics[soure - 1][ayeh - 1], encoding='utf-8') as f:
-        data = json.load(f)
+    filepath = _semantic_index()[soure - 1][ayeh - 1]
+    data = _verse_json(filepath)
 
     nodes = pd.DataFrame(data['Data']['ayeh']['node']['Data'])
     nodes.index = nodes['id']
