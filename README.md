@@ -25,9 +25,11 @@
     <span> | </span>
       Revelation Order
     <span> | </span> <br>
-      Embeddings (coming soon)
+      Surah Graph Analysis
     <span> | </span>
       Translations
+    <span> | </span>
+      Hadiths
   </h5>
 </div>
 
@@ -46,6 +48,7 @@ Contents:
 - [Multiple Matches](#multiple-matches)
 - [Word-level Analysis](#word-level-analysis)
 - [JSON Output](#json-output)
+- [Surah-Level Graph Analysis](#surah-level-graph-analysis)
 - [Hadiths](#hadiths)
 - [Visualization](#visualization)
 - [Contributors](#contributors)
