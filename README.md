@@ -246,6 +246,71 @@ print(json.dumps(result, ensure_ascii=False, indent=2))
 ]
 ```
 
+## Surah-Level Graph Analysis
+
+`nlp('فاتحه')` (or `nlp(1)`) returns a `SurahDoc` — an object containing all verse docs for the surah and tools for graph-based analysis.
+
+```python
+from quranic_nlp import language, graph
+
+nlp = language.Pipeline('pos,root,lem', 'fa#1')
+
+# Get all verses of a surah as a SurahDoc
+surah = nlp('فاتحه')          # by Arabic name
+# surah = nlp(1)              # by integer index
+# surah = nlp('1')            # by string index
+
+print(f'{surah.surah}: {len(surah)} verses')
+
+# Iterate over verse docs
+for doc in surah:
+    print(doc._.ayah, doc._.text)
+
+# Build a verse-similarity graph (TF-IDF over surface + lemma + root)
+G = surah.build_graph(rep='tfidf')
+
+# Or with a sentence-embedding model (any model with .encode())
+# from sentence_transformers import SentenceTransformer
+# model = SentenceTransformer('CAMeL-Lab/bert-base-arabic-camelbert-ca')
+# G = surah.build_graph(rep='embedding', model=model, threshold=0.3)
+
+# Find the most central verse
+doc, scores = surah.central_verse(method='pagerank')
+print(f'Most central: Ayah {doc._.ayah}')
+print(doc._.text)
+print(scores)
+
+# All centrality methods
+for method in ['pagerank', 'degree', 'betweenness', 'eigenvector', 'mst']:
+    doc, _ = surah.central_verse(method=method)
+    print(f'{method:12s} → Ayah {doc._.ayah}')
+
+# Maximum Spanning Tree
+T = surah.mst()
+import networkx as nx
+print(nx.info(T))
+
+# Access the underlying NetworkX graph directly
+G = surah.graph
+print(f'Nodes: {G.number_of_nodes()}, Edges: {G.number_of_edges()}')
+for u, v, data in G.edges(data=True):
+    print(f'  Ayah {u+1} ↔ Ayah {v+1}: similarity = {data["weight"]:.3f}')
+```
+
+You can also use the lower-level `graph` module directly with any list of docs:
+
+```python
+from quranic_nlp import language, graph
+
+nlp = language.Pipeline('pos,root,lem')
+docs = language.surah_docs(nlp, 'فاتحه')   # or surah_docs(nlp, 1)
+
+G = graph.build_graph(docs, rep='tfidf')
+T = graph.mst(G)
+doc, scores = graph.central_verse(G, docs, method='pagerank')
+print(doc._.surah, doc._.ayah, doc._.text)
+```
+
 ## Hadiths
 
 ```python

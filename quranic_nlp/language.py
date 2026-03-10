@@ -164,10 +164,145 @@ class NLP:
             self.nlp.add_pipe('root')
 
 
+class SurahDoc:
+    """
+    Represents all verses of a single surah with graph-based analysis tools.
+
+    Returned by ``nlp('حمد')`` or ``nlp(1)`` when a surah name or index is given.
+
+    Attributes
+    ----------
+    docs : list[Doc]
+        All verse docs of the surah, in order.
+    surah : str
+        Arabic name of the surah.
+    soure_index : int
+        1-based surah index.
+
+    Example
+    -------
+    ::
+
+        from quranic_nlp import language, graph
+
+        nlp = language.Pipeline('pos,root,lem', 'fa#1')
+        surah = nlp('فاتحه')
+
+        # Access verse docs
+        for doc in surah.docs:
+            print(doc._.ayah, doc._.text)
+
+        # Build a similarity graph
+        G = surah.build_graph(rep='tfidf')
+
+        # Find the most central verse
+        doc, scores = surah.central_verse(method='pagerank')
+        print(doc._.ayah, doc._.text)
+
+        # Maximum Spanning Tree
+        T = surah.mst()
+
+        # Use the graph directly with networkx
+        import networkx as nx
+        print(nx.info(surah.graph))
+    """
+
+    def __init__(self, docs, surah_name, soure_index):
+        self.docs = docs
+        self.surah = surah_name
+        self.soure_index = soure_index
+        self._graph = None
+
+    def build_graph(self, rep='tfidf', model=None, threshold=0.0):
+        """
+        Build a verse-similarity graph and cache it.
+
+        Parameters
+        ----------
+        rep : str
+            ``'tfidf'`` or ``'embedding'``.
+        model : optional
+            Required when ``rep='embedding'``.
+        threshold : float
+            Minimum similarity for an edge.
+
+        Returns
+        -------
+        networkx.Graph
+        """
+        from quranic_nlp import graph as _graph
+        self._graph = _graph.build_graph(self.docs, rep=rep, model=model, threshold=threshold)
+        return self._graph
+
+    @property
+    def graph(self):
+        """Return the cached graph, building it with TF-IDF if not yet built."""
+        if self._graph is None:
+            self.build_graph()
+        return self._graph
+
+    def central_verse(self, method='pagerank'):
+        """
+        Return the most central verse.
+
+        Parameters
+        ----------
+        method : str
+            One of ``'pagerank'``, ``'degree'``, ``'betweenness'``,
+            ``'eigenvector'``, ``'mst'``.
+
+        Returns
+        -------
+        tuple[Doc, dict]
+            ``(most_central_doc, {node_index: score, ...})``
+        """
+        from quranic_nlp import graph as _graph
+        return _graph.central_verse(self.graph, self.docs, method=method)
+
+    def mst(self):
+        """
+        Return the Maximum Spanning Tree of the similarity graph.
+
+        Returns
+        -------
+        networkx.Graph
+        """
+        from quranic_nlp import graph as _graph
+        return _graph.mst(self.graph)
+
+    def __len__(self):
+        return len(self.docs)
+
+    def __iter__(self):
+        return iter(self.docs)
+
+    def __getitem__(self, idx):
+        return self.docs[idx]
+
+    def __repr__(self):
+        return f"SurahDoc(surah={self.surah!r}, n_ayahs={len(self.docs)})"
+
+
+def _is_surah_input(text: str) -> bool:
+    """Return True if *text* looks like a surah name/index (not free-text search)."""
+    # Pure integer → surah by index
+    if str(text).strip().isdigit():
+        return True
+    # Check against known surah names
+    try:
+        utils.get_index_soure_from_name_soure(str(text).strip())
+        return True
+    except (ValueError, Exception):
+        return False
+
+
 class QuranicNLP:
     """
-    Wrapper around a spaCy Language that returns a list of docs for free-text
-    queries and a single doc for ``'surah#ayah'`` references.
+    Wrapper around a spaCy Language with smart dispatch based on input format:
+
+    - ``'surah#ayah'`` (e.g. ``'1#1'``) → single ``Doc``
+    - surah name/index (e.g. ``'فاتحه'`` or ``1``) → ``SurahDoc``
+    - free Arabic text (e.g. ``'رب العالمین'``) → ``list[Doc]``
 
     Use ``Pipeline(...)`` or ``load_pipeline(...)`` to get an instance.
     """
@@ -175,18 +310,29 @@ class QuranicNLP:
     def __init__(self, nlp):
         self._nlp = nlp
 
-    def __call__(self, text: str):
+    def __call__(self, text):
         """
         Process *text* and return:
 
-        - A single ``Doc`` when *text* is a ``'surah#ayah'`` reference
-          (e.g. ``'1#1'`` or ``'حمد#1'``).
-        - A ``list[Doc]`` when *text* is free Arabic (no ``#``), returning
-          all matching verses.
+        - A single ``Doc`` when *text* is a ``'surah#ayah'`` reference.
+        - A ``SurahDoc`` when *text* is a surah name or integer index.
+        - A ``list[Doc]`` for free Arabic text, returning all matching verses.
         """
-        if '#' not in text:
-            return search_all(self, text)
-        return self._nlp(text)
+        text_str = str(text).strip()
+        if '#' in text_str:
+            return self._nlp(text_str)
+        if _is_surah_input(text_str):
+            return self._make_surah_doc(text_str)
+        return search_all(self, text_str)
+
+    def _make_surah_doc(self, text: str) -> 'SurahDoc':
+        if text.isdigit():
+            soure = int(text)
+        else:
+            soure = utils.get_index_soure_from_name_soure(text)
+        surah_name = utils.get_sourah_name_from_soure_index(soure)
+        docs = surah_docs(self, soure)
+        return SurahDoc(docs, surah_name, soure)
 
     def __getattr__(self, name):
         return getattr(self._nlp, name)
@@ -270,6 +416,46 @@ def search_all(nlp, text: str, max_results: int = None) -> list:
     if max_results is not None:
         matches = matches[:max_results]
     return [nlp(f'{soure}#{ayeh}') for soure, ayeh in matches]
+
+
+def surah_docs(nlp, surah) -> list:
+    """
+    Return a list of processed docs for every verse in a surah.
+
+    Parameters
+    ----------
+    nlp : QuranicNLP
+        Pipeline created with ``Pipeline(...)`` or ``load_pipeline(...)``.
+    surah : int or str
+        Surah index (e.g. ``1``) or Arabic name (e.g. ``'فاتحه'``).
+
+    Returns
+    -------
+    list[Doc]
+        One doc per verse, in order.
+
+    Example
+    -------
+    ::
+
+        from quranic_nlp import language, graph
+
+        nlp = language.Pipeline('pos,root,lem', 'fa#1')
+
+        docs = language.surah_docs(nlp, 'فاتحه')  # or surah_docs(nlp, 1)
+        G = graph.build_graph(docs, rep='tfidf')
+        doc, scores = graph.central_verse(G, docs, method='pagerank')
+        print(doc._.surah, doc._.ayah, doc._.text)
+    """
+    if isinstance(surah, int):
+        soure = surah
+    elif str(surah).isdigit():
+        soure = int(surah)
+    else:
+        soure = utils.get_index_soure_from_name_soure(str(surah))
+
+    n_ayahs = len(utils._semantic_index()[soure - 1])
+    return [nlp(f'{soure}#{a}') for a in range(1, n_ayahs + 1)]
 
 
 def to_json(pipelines: str, doc) -> list:
